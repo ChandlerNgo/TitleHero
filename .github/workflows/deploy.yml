@@ -28,7 +28,7 @@ jobs:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY_FRONTEND }}
         run: |
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:latest ./frontend
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:latest ./client
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
 
       - name: Build and push backend
@@ -36,5 +36,5 @@ jobs:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY_BACKEND }}
         run: |
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:latest ./backend
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:latest ./server
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
