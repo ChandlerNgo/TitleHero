@@ -39,14 +39,12 @@ jobs:
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:latest ./server
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
 
-      - name: Deploy client to EC2
-        uses: webfactory/ssh-agent@v0.9.1
-        with:
-          ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
-
       - name: SSH client and update container
+        env:
+          PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
         run: |
-          ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.FRONTEND_EC2_IP }} << 'EOF'
+          echo "$PRIVATE_KEY" > private_key && chmod 400 private_key
+          ssh -i private_key -o StrictHostKeyChecking=no ubuntu@${{ secrets.FRONTEND_EC2_IP }} << 'EOF'
             aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | \
             docker login --username AWS --password-stdin ${{ steps.login-ecr.outputs.registry }}
             docker pull ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY_FRONTEND }}:latest
@@ -56,8 +54,11 @@ jobs:
           EOF
 
       - name: SSH and update server via bastion
+        env:
+          PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
         run: |
-          ssh -A -o StrictHostKeyChecking=no ubuntu@${{ secrets.FRONTEND_EC2_IP }} -t \
+          echo "$PRIVATE_KEY" > private_key && chmod 400 private_key
+          ssh -i private_key -A -o StrictHostKeyChecking=no ubuntu@${{ secrets.FRONTEND_EC2_IP }} -t \
           ssh ubuntu@${{ secrets.BACKEND_PRIVATE_IP }} << 'EOF'
             aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | \
             docker login --username AWS --password-stdin ${{ steps.login-ecr.outputs.registry }}
