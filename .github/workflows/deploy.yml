@@ -1,4 +1,4 @@
-name: Build and Push Frontend & Backend to ECR
+name: Build, Push, and Deploy Frontend and Backend
 
 on:
   push:
@@ -38,3 +38,31 @@ jobs:
         run: |
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:latest ./server
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+      - name: Deploy frontend to EC2
+        uses: webfactory/ssh-agent@v0.7.1
+        with:
+          ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
+
+      - name: SSH frontend and update container
+        run: |
+          ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.FRONTEND_EC2_IP }} << 'EOF'
+            aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | \
+            docker login --username AWS --password-stdin ${{ steps.login-ecr.outputs.registry }}
+            docker pull ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY_CLIENT }}:latest
+            docker stop frontend || true
+            docker rm frontend || true
+            docker run -d -p 80:80 --name frontend ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY_CLIENT }}:latest
+          EOF
+
+      - name: SSH and update backend via bastion
+        run: |
+          ssh -A -o StrictHostKeyChecking=no ubuntu@${{ secrets.FRONTEND_EC2_IP }} -t \
+          ssh ubuntu@${{ secrets.BACKEND_PRIVATE_IP }} << 'EOF'
+            aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | \
+            docker login --username AWS --password-stdin ${{ steps.login-ecr.outputs.registry }}
+            docker pull ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY_SERVER }}:latest
+            docker stop backend || true
+            docker rm backend || true
+            docker run -d -p 5000:5000 --name backend ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY_SERVER }}:latest
+          EOF
