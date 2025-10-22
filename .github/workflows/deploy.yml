@@ -23,7 +23,7 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build and push frontend
+      - name: Build and push client
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY_FRONTEND }}
@@ -31,7 +31,7 @@ jobs:
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:latest ./client
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
 
-      - name: Build and push backend
+      - name: Build and push server
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY_BACKEND }}
@@ -39,30 +39,30 @@ jobs:
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:latest ./server
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
 
-      - name: Deploy frontend to EC2
+      - name: Deploy client to EC2
         uses: webfactory/ssh-agent@v0.9.1
         with:
           ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
 
-      - name: SSH frontend and update container
+      - name: SSH client and update container
         run: |
           ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.FRONTEND_EC2_IP }} << 'EOF'
             aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | \
             docker login --username AWS --password-stdin ${{ steps.login-ecr.outputs.registry }}
-            docker pull ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY_CLIENT }}:latest
+            docker pull ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY_FRONTEND }}:latest
             docker stop frontend || true
             docker rm frontend || true
-            docker run -d -p 80:80 --name frontend ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY_CLIENT }}:latest
+            docker run -d -p 80:80 --name frontend ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY_FRONTEND }}:latest
           EOF
 
-      - name: SSH and update backend via bastion
+      - name: SSH and update server via bastion
         run: |
           ssh -A -o StrictHostKeyChecking=no ubuntu@${{ secrets.FRONTEND_EC2_IP }} -t \
           ssh ubuntu@${{ secrets.BACKEND_PRIVATE_IP }} << 'EOF'
             aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | \
             docker login --username AWS --password-stdin ${{ steps.login-ecr.outputs.registry }}
-            docker pull ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY_SERVER }}:latest
+            docker pull ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY_BACKEND }}:latest
             docker stop backend || true
             docker rm backend || true
-            docker run -d -p 5000:5000 --name backend ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY_SERVER }}:latest
+            docker run -d -p 5000:5000 --name backend ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY_BACKEND }}:latest
           EOF
