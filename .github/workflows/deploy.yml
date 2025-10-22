@@ -5,7 +5,7 @@ on:
     branches: [ main ]
 
 jobs:
-  build-and-push:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
@@ -43,28 +43,40 @@ jobs:
         run: |
           INSTANCE_ID=${{ secrets.FRONTEND_EC2_ID }}
           aws ssm send-command \
-            --targets "Key=instanceIds,Values=$INSTANCE_ID" \
+            --targets "Key=InstanceIds,Values=$INSTANCE_ID" \
             --document-name "AWS-RunShellScript" \
             --comment "Deploy frontend container" \
             --parameters 'commands=[
-              "aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ steps.login-ecr.outputs.registry }}",
-              "docker pull ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY_FRONTEND }}:latest",
-              "docker stop frontend || true",
-              "docker rm frontend || true",
-              "docker run -d -p 80:80 --name frontend ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY_FRONTEND }}:latest"
+              "set -e",
+              "echo Logging into ECR...",
+              "aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | sudo docker login --username AWS --password-stdin ${{ steps.login-ecr.outputs.registry }}",
+              "echo Pulling latest frontend image...",
+              "sudo docker pull ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY_FRONTEND }}:latest",
+              "echo Stopping old container if exists...",
+              "sudo docker stop frontend || true",
+              "sudo docker rm frontend || true",
+              "echo Running new container...",
+              "sudo docker run -d -p 80:80 --name frontend ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY_FRONTEND }}:latest",
+              "echo Deployment finished."
             ]'
 
       - name: Deploy server via SSM
         run: |
           INSTANCE_ID=${{ secrets.BACKEND_EC2_ID }}
           aws ssm send-command \
-            --targets "Key=instanceIds,Values=$INSTANCE_ID" \
+            --targets "Key=InstanceIds,Values=$INSTANCE_ID" \
             --document-name "AWS-RunShellScript" \
             --comment "Deploy backend container" \
             --parameters 'commands=[
-              "aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ steps.login-ecr.outputs.registry }}",
-              "docker pull ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY_BACKEND }}:latest",
-              "docker stop backend || true",
-              "docker rm backend || true",
-              "docker run -d -p 5000:5000 --name backend ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY_BACKEND }}:latest"
+              "set -e",
+              "echo Logging into ECR...",
+              "aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | sudo docker login --username AWS --password-stdin ${{ steps.login-ecr.outputs.registry }}",
+              "echo Pulling latest backend image...",
+              "sudo docker pull ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY_BACKEND }}:latest",
+              "echo Stopping old container if exists...",
+              "sudo docker stop backend || true",
+              "sudo docker rm backend || true",
+              "echo Running new container...",
+              "sudo docker run -d -p 5000:5000 --name backend ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY_BACKEND }}:latest",
+              "echo Deployment finished."
             ]'
