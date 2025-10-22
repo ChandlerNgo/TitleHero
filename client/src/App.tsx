@@ -8,7 +8,7 @@ function App() {
     <div className="app-container">
       <header>
         <h1>Title Hero</h1>
-        <p>Welcome to your project!</p>
+        <p>Welcome to your title inspector!</p>
       </header>
 
       <main>
