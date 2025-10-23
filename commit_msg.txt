@@ -1,9 +1,0 @@
-feat(auth): add role-aware login with temporary mock auth
-
-- merge UI + login logic into `client/src/pages/Login.tsx`
-- store `role` and `username` in localStorage for role checks
-- add auth helpers in `client/src/utils/auth.ts` (isAdmin, isAuthenticated, logout, route guards)
-- add simple mock users and `/api/login` stub for local testing
-- show "ADMIN MODE" in `Dashboard` for admin users
-
-Notes: mock auth is temporary — replace with real DB/JWT flow when backend is ready.
