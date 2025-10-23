@@ -1,31 +1,13 @@
-import { useState } from 'react'
-import './App.css'
+// src/App.tsx
+import { useState } from "react";
+import Login from "./pages/Login";
+import Dashboard from "./pages/Dashboard";
 
-function App() {
-  const [count, setCount] = useState(0)
+type View = "login" | "main";
 
-  return (
-    <div className="app-container">
-      <header>
-        <h1>Title Hero</h1>
-        <p>Welcome to your title inspector!</p>
-      </header>
-
-      <main>
-        <div className="card">
-          <h2>Interactive Counter</h2>
-          <button onClick={() => setCount((count) => count + 1)}>
-            Count: {count}
-          </button>
-          <p>Click the button to increase the count.</p>
-        </div>
-      </main>
-
-      <footer>
-        <p>Created with React + TypeScript</p>
-      </footer>
-    </div>
-  )
+export default function App() {
+  const [view, setView] = useState<View>("login");
+  return view === "login"
+    ? <Login onEnter={() => setView("main")} />
+    : <Dashboard />;
 }
-
-export default App

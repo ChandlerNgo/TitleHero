@@ -1,68 +1,49 @@
+/* index.css */
+
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+  /* Palette */
+  --maroon-900: #6e2b2f;
+  --maroon-800: #7e3136;
+  --maroon-700: #8e3940;
+  --maroon-600: #a1474e;
+  --maroon-500: #b15660;
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+  --stone-50:  #faf7f7;
+  --stone-100: #f1eded;
+  --stone-200: #e6e0e0;
+  --stone-300: #d8d1d1;
+  --stone-400: #c4bbbb;
+  --stone-500: #a69d9d;
 
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  --ink-900:   #151314;
+  --ink-700:   #2b2729;
+  --ink-600:   #3a3537;
+
+  --accent:    #6df34d;
+
+  /* Radii, spacing, fonts, shadows */
+  --r-lg: 18px;
+  --r-md: 12px;
+  --pad-lg: 24px;
+  --pad-md: 16px;
+  --pad-sm: 10px;
+  --font-ui: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.06);
+  --shadow-md: 0 8px 24px rgba(0,0,0,0.08);
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
+/* Reset */
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body, #root { height: 100%; }
 
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
+  font-family: var(--font-ui);
+  color: var(--ink-900);
+  background: var(--stone-50);
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
-
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
-}
+/* Neutral inputs/buttons – page CSS will style them further */
+button, input, select, textarea { font: inherit; }
+a { color: inherit; text-decoration: none; }
