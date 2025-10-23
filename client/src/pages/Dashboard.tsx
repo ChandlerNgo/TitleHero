@@ -1,9 +1,11 @@
 // src/pages/Dashboard.tsx
 import type { FormEvent } from "react";
 import "./Dashboard.css";
+import { isAdmin } from "../utils/auth";
 
 export default function Dashboard() {
   const stop = (e: FormEvent) => e.preventDefault();
+  const adminMode = isAdmin();
 
   return (
     <div className="app">
@@ -34,6 +36,7 @@ export default function Dashboard() {
       
       <header className="header">
         <div className="breadcrumbs">
+          {adminMode && <span style={{ color: '#ff4444', fontWeight: 'bold', marginRight: '10px' }}>ADMIN MODE</span>}
           DATABASE <span> - </span> ROBERTSON COUNTY <span> - </span>{" "}
           <span className="current">SEARCH</span>
         </div>
