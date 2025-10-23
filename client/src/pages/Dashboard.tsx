@@ -1,5 +1,5 @@
 // src/pages/Dashboard.tsx
-import { FormEvent } from "react";
+import type { FormEvent } from "react";
 import "./Dashboard.css";
 
 export default function Dashboard() {
