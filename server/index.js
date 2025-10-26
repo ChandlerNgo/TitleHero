@@ -1,12 +1,25 @@
+require('dotenv').config();
 const express = require('express');
+const getPool = require('./config');
+const router = express.Router();
+
+const documentsRoutes = require('./routes/documents');
+const loginRoutes = require('./routes/login');
+const testRoutes = require('./routes/test');
+
 const app = express();
-const PORT = 5000;
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// Root route
-app.get('/', (req, res) => {
-  res.send('Server is running.');
-});
+(async () => {
+  await getPool();
 
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-});
+  app.use('/api', router); // prefix all routes with /api
+
+  router.use(documentsRoutes);
+  router.use(loginRoutes);
+  router.use(testRoutes);
+
+  const port = process.env.PORT || 5000;
+  app.listen(port, () => console.log(`Server running on port ${port}`));
+})();
