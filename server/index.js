@@ -1,36 +1,25 @@
+require('dotenv').config();
 const express = require('express');
-const cors = require('cors');
-const { authenticateUser } = require('./auth/users');
+const getPool = require('./config');
+const router = express.Router();
+
+const documentsRoutes = require('./routes/documents');
+const loginRoutes = require('./routes/login');
+const testRoutes = require('./routes/test');
+
 const app = express();
-const PORT = process.env.PORT || 3001;
-
-app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// Root route
-app.get('/', (req, res) => {
-  res.send('Server is running.');
-});
+(async () => {
+  await getPool();
 
-// Login route
-app.post('/api/login', (req, res) => {
-  const { username, password } = req.body;
-  
-  const user = authenticateUser(username, password);
-  
-  if (user) {
-    // In a real app, you would generate a proper JWT token
-    const token = `fake-jwt-token-${Math.random()}`;
-    res.json({
-      token,
-      role: user.role,
-      username: user.username
-    });
-  } else {
-    res.status(401).json({ message: 'Invalid username or password' });
-  }
-});
+  app.use('/api', router); // prefix all routes with /api
 
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-});
+  router.use(documentsRoutes);
+  router.use(loginRoutes);
+  router.use(testRoutes);
+
+  const port = process.env.PORT || 5000;
+  app.listen(port, () => console.log(`Server running on port ${port}`));
+})();

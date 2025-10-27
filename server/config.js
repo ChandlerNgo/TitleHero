@@ -1,0 +1,44 @@
+require('dotenv').config();
+const AWS = require('aws-sdk');
+const mysql = require('mysql2/promise');
+
+const isDev = process.env.NODE_ENV === 'development';
+let pool;
+
+async function getDbConfig(){
+    if(isDev){
+        // local dev from .env
+        return{
+            host: "127.0.0.1",
+            user: process.env.username,
+            password: process.env.password,
+            database: process.env.dbname,
+            port: process.env.port
+        };
+    }else{
+        const client = new AWS.SecretsManager({ region: 'us-east-2' });
+        const data = await client.getSecretValue({ SecretId: 'prod/db-creds' }).promise();
+        const secret = JSON.parse(data.SecretString);
+    
+        return{
+            host: secret.host,
+            user: secret.username,
+            password: secret.password,
+            database: secret.dbname
+        };
+    }
+}
+
+async function getPool(){
+    if(pool){
+        return pool;
+    }
+
+    let config = await getDbConfig();
+
+    pool = mysql.createPool(config);
+    
+    return pool;
+}
+
+module.exports = getPool;
