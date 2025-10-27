@@ -39,14 +39,16 @@ CREATE TABLE County (
 DROP TABLE IF EXISTS Admin;
 CREATE TABLE Admin (
   adminID         INT PRIMARY KEY AUTO_INCREMENT,
-  name            VARCHAR(255) NOT NULL,
+  username        VARCHAR(255) NOT NULL UNIQUE,
+  password        VARCHAR(255) NOT NULL,
   permissions     TEXT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 DROP TABLE IF EXISTS `User`;
 CREATE TABLE `User` (
   userID          INT PRIMARY KEY AUTO_INCREMENT,
-  name            VARCHAR(255) NOT NULL,
+  username        VARCHAR(255) NOT NULL UNIQUE,
+  password        VARCHAR(255) NOT NULL,
   role            VARCHAR(255) NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
