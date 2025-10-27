@@ -1,12 +1,12 @@
 const users = [
     {
         username: "admin",
-        password: "admin123",  // hash this before data is added to database
+        password: "admin1234",  // hash this before data is added to database
         role: "admin"
     },
     {
         username: "user",
-        password: "user123",   // hash this before data is added to database
+        password: "user1234",   // hash this before data is added to database
         role: "user"
     }
 ];
