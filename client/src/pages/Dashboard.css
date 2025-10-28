@@ -1,175 +1,281 @@
-/* for Dashboard.css*/
+/* ====== Dashboard.css ====== */
+/* Design tokens (adjust to your palette) */
+:root {
+  --bg: #f7f5f3;
+  --panel: #ffffff;
+  --ink: #1c1715;
+  --ink-subtle: #6d6967;
+  --line: #e7e3df;
 
-/* LAYOUT SHELL */
+  --maroon-900: #592829;
+
+  --accent: #7ee066;     /* search button */
+  --radius-md: 14px;
+  --radius-lg: 18px;
+
+  --space-1: 8px;
+  --space-2: 12px;
+  --space-3: 16px;
+  --space-4: 20px;
+  --space-5: 24px;
+  --shadow-md: 0 8px 24px rgba(0,0,0,.08);
+}
+
+/* Layout grid */
 .app {
   min-height: 100vh;
+  background: var(--bg);
   display: grid;
-  grid-template-columns: 260px 1fr;
-  grid-template-rows: 72px 1fr;
+  grid-template-columns: auto 1fr;
   grid-template-areas:
     "sidebar header"
     "sidebar main";
 }
 
-/* SIDEBAR */
+/* Sidebar - compact */
 .sidebar {
   grid-area: sidebar;
   background: var(--maroon-900);
-  color: white;
+  color: #fff;
   padding: 18px 14px;
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   gap: 20px;
-  border-top-right-radius: var(--r-lg);
-  border-bottom-right-radius: var(--r-lg);
+  border-top-right-radius: var(--radius-lg);
+  border-bottom-right-radius: var(--radius-lg);
+  position: relative;
+  height: auto;              /* only as tall as content */
 }
 
+/* Brand at top */
 .brand {
   font-weight: 800;
-  letter-spacing: 1px;
+  letter-spacing: 0.08em;
   padding: 10px 12px;
   border-radius: 10px;
-  background: rgba(255,255,255,0.06);
+  background: rgba(255,255,255,0.1);
   width: fit-content;
+  line-height: 1;
 }
 
-.nav {
+/* Upload button in bottom-left corner */
+.sidebar .upload-btn {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  width: 54px;
+  height: 54px;
+  border-radius: 14px;
+  background: #fff;
+  color: var(--maroon-900);
+  border: none;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.nav h4 {
-  margin: 16px 10px 6px;
-  opacity: 0.8;
-  font-weight: 700;
-  font-size: 12px;
-  letter-spacing: 0.12em;
-}
-.nav button {
-  text-align: left;
-  width: 100%;
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px solid rgba(255,255,255,0.08);
-  background: rgba(255,255,255,0.03);
-  color: white;
-  cursor: default;
+  align-items: center;
+  justify-content: center;
+  transition: 0.2s;
 }
 
-/* HEADER */
+.sidebar .upload-btn:hover {
+  transform: translateY(-2px);
+  background: #f0e8e8;
+}
+
+
+/* ====== Header ====== */
 .header {
   grid-area: header;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 var(--pad-lg);
+  padding: 0 var(--space-5);
 }
-.breadcrumbs { font-weight: 700; letter-spacing: .02em; }
-.breadcrumbs span { opacity: 0.7; }
-.breadcrumbs .current { opacity: 1; }
+.breadcrumbs { font-weight: 800; letter-spacing: .02em; }
+.profile { display: flex; gap: 12px; align-items: center; }
+.avatar { width: 36px; height: 36px; border-radius: 50%; background: #ddd; }
 
-.profile { display: flex; align-items: center; gap: 12px; }
-.profile .avatar {
-  width: 36px; height: 36px; border-radius: 50%;
-  background: var(--stone-300);
+/* ====== Main ====== */
+.main {
+  grid-area: main;
+  padding: var(--space-5);
+  display: flex;
+  justify-content: center;
 }
-
-/* MAIN */
-.main { grid-area: main; padding: var(--pad-lg); }
-
 .card {
-  background: white;
-  border-radius: var(--r-lg);
-  padding: var(--pad-lg);
+  width: 100%;
+  background: var(--panel);
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-md);
-  border: 1px solid var(--stone-200);
+  border: 1px solid var(--line);
+  padding: var(--space-5);
 }
 
-/* FORM GRID */
+/* ====== Search form ====== */
 .search-title {
   font-weight: 800;
   letter-spacing: .04em;
-  margin-bottom: 6px;
+  margin-bottom: var(--space-2);
 }
 
+/* 12-column fluid grid inside the card */
 .search-grid {
   display: grid;
-  grid-template-columns: 1.6fr 1fr 0.9fr;
-  gap: 16px 24px;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: var(--space-3) var(--space-4);
 }
 
+/* column span helpers */
+.col-12 { grid-column: span 6; }
+.col-8  { grid-column: span 8; }
+.col-6  { grid-column: span 6; }
+.col-4  { grid-column: span 4; }
+.col-3  { grid-column: span 3; }
+
+/* inputs */
 .field { display: flex; flex-direction: column; gap: 6px; }
 .field label {
   font-size: 12px;
   letter-spacing: .08em;
   font-weight: 700;
-  color: var(--ink-700);
+  color: var(--ink-subtle);
 }
 
-.input {
-  background: var(--stone-100);
-  border: 1px solid var(--stone-200);
-  border-radius: 14px;
+.input, .textarea, .criteria {
+  background: #f3efec;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
   padding: 12px 14px;
+  color: var(--ink);
 }
-
 .textarea { height: 110px; resize: none; }
+.criteria { min-height: 140px; }
 
-.subgrid-3 {
-  display: grid;
-  grid-template-columns: 1fr 0.7fr 0.7fr;
-  gap: 16px 24px;
+/* --- Actions row stays left-aligned --- */
+.actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-start;
+  align-items: center;
+  margin-top: var(--space-2);
 }
 
-.criteria {
-  background: var(--stone-100);
-  border: 1px solid var(--stone-200);
-  border-radius: 14px;
-  min-height: 120px;
+/* --- Icon button for the caret --- */
+.btn.icon {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-md);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  padding: 0;
+}
+
+/* --- Dropdown menu --- */
+.dropdown {
+  position: relative;
+}
+.dropdown-menu {
+  position: absolute;
+  top: 64px;             /* sits below the caret button */
+  left: 0;
+  min-width: 260px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: var(--shadow-md);
   padding: 10px;
+  z-index: 30;
+}
+.dropdown-title {
+  font-weight: 800;
+  font-size: 12px;
+  letter-spacing: .08em;
+  color: var(--ink-subtle);
+  margin: 4px 6px 8px;
+}
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 6px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.dropdown-item:hover {
+  background: #f7f5f3;
+}
+.dropdown-item input {
+  transform: translateY(1px);
+}
+.dropdown-footer {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px;
+  margin-top: 6px;
+  border-top: 1px dashed var(--line);
+}
+.btn.tiny {
+  padding: 6px 10px;
+  font-size: 12px;
+  border-radius: 8px;
 }
 
-.actions-right {
-  grid-column: 3 / 4;
-  display: flex; gap: 10px;
-  align-items: end; justify-content: flex-end;
-}
+/* keep your col-12/8/6/4/3 grid classes from earlier revamp */
 
-/* BUTTONS (INERT) */
+
+/* ====== Buttons (inert) ====== */
 .btn {
-  border-radius: 14px;
+  border-radius: var(--radius-md);
   padding: 12px 18px;
-  border: 1px solid var(--stone-300);
-  background: white;
+  border: 1px solid #d4cec9;
+  background: #fff;
+  font-weight: 600;
   cursor: default;
 }
-.btn-primary { background: var(--accent); border: none; font-weight: 800; }
-.btn-pill { padding: 6px 10px; }
+.btn-primary {
+  background: var(--accent);
+  border: none;
+  font-weight: 800;
+}
 
-/* RESULTS */
-.results { margin-top: 18px; }
+/* ====== Results ====== */
+.results { margin-top: var(--space-4); }
 .results-header {
-  display: flex; justify-content: space-between; align-items: center;
-  margin-bottom: 12px;
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: var(--space-3);
 }
 .results-title { font-weight: 800; letter-spacing: .04em; }
 
-.result-row {
-  background: var(--stone-200);
-  border-radius: 16px;
-  height: 64px;
-  display: flex; align-items: center;
-  padding: 0 14px;
-  margin-bottom: 12px;
-}
-
-/* FILTER PILL */
 .filter-pill {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: var(--stone-200);
-  border: 1px solid var(--stone-300);
+  background: #efebe8;
+  border: 1px solid var(--line);
   border-radius: 999px;
   padding: 8px 12px;
+}
+
+.result-row {
+  height: 64px;
+  border-radius: 16px;
+  background: #ece7e3;
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  margin-bottom: 12px;
+}
+
+/* ====== Responsive ====== */
+@media (max-width: 980px) {
+  .app { grid-template-columns: 200px 1fr; }
+  .card { width: 100%; }
+  .col-8 { grid-column: span 12; }
+  .col-6 { grid-column: span 12; }
+  .col-4 { grid-column: span 12; }
+  .col-3 { grid-column: span 6; }
 }
