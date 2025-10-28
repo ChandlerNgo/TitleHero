@@ -10,7 +10,7 @@ async function getDbConfig(){
         // local dev from .env
         return{
             host: "127.0.0.1",
-            user: process.env.username,
+            user: process.env.user,
             password: process.env.password,
             database: process.env.dbname,
             port: process.env.port
