@@ -1,6 +1,6 @@
 require('dotenv').config();
 const express = require('express');
-const getPool = require('./config');
+const { getPool } = require('./config'); 
 const router = express.Router();
 
 const documentsRoutes = require('./routes/documents');

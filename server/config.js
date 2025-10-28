@@ -53,4 +53,4 @@ async function getPool(){
     return pool;
 }
 
-module.exports = getPool, getOpenAPIKey;
+module.exports = {getPool, getOpenAPIKey};

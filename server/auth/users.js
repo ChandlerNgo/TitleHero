@@ -1,5 +1,5 @@
 const bcrypt = require('bcrypt');
-const getPool = require('../config');
+const {getPool} = require('../config');
 
 async function authenticateUser(username, password) {
     try {
