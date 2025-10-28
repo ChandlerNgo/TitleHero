@@ -12,7 +12,11 @@
   "license": "ISC",
   "dependencies": {
     "aws-sdk": "^2.1692.0",
+<<<<<<< HEAD
     "cors": "^2.8.5",
+=======
+    "bcrypt": "^5.1.1",
+>>>>>>> 4f053b9cf01faaa3761ba256e38ec4e9feae6c4d
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "multer": "^2.0.2",

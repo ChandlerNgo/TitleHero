@@ -1,175 +1,340 @@
-/* for Dashboard.css*/
+/* ====== Dashboard.css ====== */
+/* Design tokens (adjust to your palette) */
+:root {
+  --bg: #f7f5f3;
+  --panel: #ffffff;
+  --ink: #1c1715;
+  --ink-subtle: #6d6967;
+  --line: #e7e3df;
 
-/* LAYOUT SHELL */
+  --maroon-900: #592829;
+
+  --accent: #7ee066;     /* search button */
+  --radius-md: 14px;
+  --radius-lg: 18px;
+
+  --space-1: 8px;
+  --space-2: 12px;
+  --space-3: 16px;
+  --space-4: 20px;
+  --space-5: 24px;
+  --shadow-md: 0 8px 24px rgba(0,0,0,.08);
+}
+
+/* Layout grid */
 .app {
   min-height: 100vh;
+  background: var(--bg);
   display: grid;
-  grid-template-columns: 260px 1fr;
-  grid-template-rows: 72px 1fr;
+  grid-template-columns: auto 1fr;
   grid-template-areas:
     "sidebar header"
     "sidebar main";
 }
 
-/* SIDEBAR */
+/* Sidebar - compact */
 .sidebar {
   grid-area: sidebar;
   background: var(--maroon-900);
-  color: white;
+  color: #fff;
   padding: 18px 14px;
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   gap: 20px;
-  border-top-right-radius: var(--r-lg);
-  border-bottom-right-radius: var(--r-lg);
+  border-top-right-radius: var(--radius-lg);
+  border-bottom-right-radius: var(--radius-lg);
+  position: relative;
+  height: auto;              /* only as tall as content */
 }
 
+/* Brand at top */
 .brand {
   font-weight: 800;
-  letter-spacing: 1px;
+  letter-spacing: 0.08em;
   padding: 10px 12px;
   border-radius: 10px;
-  background: rgba(255,255,255,0.06);
+  background: rgba(255,255,255,0.1);
   width: fit-content;
+  line-height: 1;
 }
 
-.nav {
+/* Upload button in bottom-left corner */
+.sidebar .upload-btn {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  width: 54px;
+  height: 54px;
+  border-radius: 14px;
+  background: #fff;
+  color: var(--maroon-900);
+  border: none;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.nav h4 {
-  margin: 16px 10px 6px;
-  opacity: 0.8;
-  font-weight: 700;
-  font-size: 12px;
-  letter-spacing: 0.12em;
-}
-.nav button {
-  text-align: left;
-  width: 100%;
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px solid rgba(255,255,255,0.08);
-  background: rgba(255,255,255,0.03);
-  color: white;
-  cursor: default;
+  align-items: center;
+  justify-content: center;
+  transition: 0.2s;
 }
 
-/* HEADER */
+.sidebar .upload-btn:hover {
+  transform: translateY(-2px);
+  background: #f0e8e8;
+}
+
+
+/* ====== Header ====== */
 .header {
   grid-area: header;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 var(--pad-lg);
+  padding: 0 var(--space-5);
 }
-.breadcrumbs { font-weight: 700; letter-spacing: .02em; }
-.breadcrumbs span { opacity: 0.7; }
-.breadcrumbs .current { opacity: 1; }
+.breadcrumbs { font-weight: 800; letter-spacing: .02em; }
+.profile { display: flex; gap: 12px; align-items: center; }
+.avatar { width: 36px; height: 36px; border-radius: 50%; background: #ddd; }
 
-.profile { display: flex; align-items: center; gap: 12px; }
-.profile .avatar {
-  width: 36px; height: 36px; border-radius: 50%;
-  background: var(--stone-300);
+/* ====== Main ====== */
+.main {
+  grid-area: main;
+  padding: var(--space-5);
+  display: flex;
+  justify-content: center;
 }
-
-/* MAIN */
-.main { grid-area: main; padding: var(--pad-lg); }
-
 .card {
-  background: white;
-  border-radius: var(--r-lg);
-  padding: var(--pad-lg);
+  width: 100%;
+  background: var(--panel);
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-md);
-  border: 1px solid var(--stone-200);
+  border: 1px solid var(--line);
+  padding: var(--space-5);
 }
 
-/* FORM GRID */
+/* ====== Search form ====== */
 .search-title {
   font-weight: 800;
   letter-spacing: .04em;
-  margin-bottom: 6px;
+  margin-bottom: var(--space-2);
 }
 
+/* 12-column fluid grid inside the card */
 .search-grid {
   display: grid;
-  grid-template-columns: 1.6fr 1fr 0.9fr;
-  gap: 16px 24px;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: var(--space-3) var(--space-4);
 }
 
+/* column span helpers */
+.col-12 { grid-column: span 6; }
+.col-8  { grid-column: span 8; }
+.col-6  { grid-column: span 6; }
+.col-4  { grid-column: span 4; }
+.col-3  { grid-column: span 3; }
+
+/* inputs */
 .field { display: flex; flex-direction: column; gap: 6px; }
 .field label {
   font-size: 12px;
   letter-spacing: .08em;
   font-weight: 700;
-  color: var(--ink-700);
+  color: var(--ink-subtle);
 }
 
-.input {
-  background: var(--stone-100);
-  border: 1px solid var(--stone-200);
-  border-radius: 14px;
+.input, .textarea, .criteria {
+  background: #f3efec;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
   padding: 12px 14px;
+  color: var(--ink);
 }
-
 .textarea { height: 110px; resize: none; }
+.criteria { min-height: 140px; }
 
-.subgrid-3 {
+/* --- Actions row stays left-aligned --- */
+.actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-start;
+  align-items: center;
+  margin-top: var(--space-2);
+
+  /* NEW: anchor */
+  position: sticky;
+  top: 8px;                 /* adjust if you want it lower/higher in the card */
+  z-index: 5;
+  background: var(--panel);
+  padding: 6px 8px;
+  border-radius: 10px;
+  box-shadow: 0 4px 14px rgba(0,0,0,.04);
+}
+
+
+/* --- Icon button for the caret --- */
+.btn.icon {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-md);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  padding: 0;
+}
+
+/* --- Dropdown layout + scrolling --- */
+/* Drop-down container remains a simple positioning context */
+.dropdown {
+  position: relative;
+}
+
+/* CHANGE: use fixed positioning so the menu is locked to viewport.
+   All placement (top/left/max-height) will be set inline from TSX. */
+.dropdown-menu {
+  position: fixed;          /* <— was absolute */
+  z-index: 1000;
+  width: min(900px, 86vw);
+  /* top/left are provided inline via style={} */
+  /* max-height is provided inline via style={} */
+
+  overflow: auto;           /* internal scroll only */
+  padding: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 10px;
+  background: var(--card, #ffffff);
+  box-shadow: 0 12px 28px rgba(0,0,0,.35);
   display: grid;
-  grid-template-columns: 1fr 0.7fr 0.7fr;
-  gap: 16px 24px;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px 14px;
 }
 
-.criteria {
-  background: var(--stone-100);
-  border: 1px solid var(--stone-200);
-  border-radius: 14px;
-  min-height: 120px;
-  padding: 10px;
+/* Drop-up class kept for styling; placement handled inline */
+.dropdown-menu.drop-up {}
+
+/* Title and footer span full width of the grid */
+.dropdown-title,
+.dropdown-footer {
+  grid-column: 1 / -1;
 }
 
-.actions-right {
-  grid-column: 3 / 4;
-  display: flex; gap: 10px;
-  align-items: end; justify-content: flex-end;
+.dropdown-title {
+  position: relative;
+  top: 0;
+  padding-bottom: 8px;
+  margin: -12px -12px 6px -12px; /* stretch to edges */
+  padding: 10px 12px;
+  background: inherit;
+  font-weight: 600;
+  border-bottom: 1px solid rgba(255,255,255,.08);
 }
 
-/* BUTTONS (INERT) */
+/* Footer pinned to bottom */
+.dropdown-footer {
+  position: sticky;
+  bottom: 0;
+  margin: 6px -12px -12px -12px;
+  padding: 8px 12px 10px 12px;
+  background: linear-gradient(to top, rgb(255, 255, 255), rgba(0,0,0,0));
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+/* Checkbox items look tidy in a grid cell */
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 6px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.dropdown-item:hover {
+  background: rgba(237, 229, 229, 0.2);
+}
+
+.dropdown-item input {
+  transform: translateY(1px);
+}
+
+/* Buttons */
+.btn.tiny {
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,.18);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.btn.tiny:hover {
+  background: rgba(255,255,255,.12);
+}
+
+/* The actions row should never cause layout jumps */
+.actions {
+  align-items: center;
+}
+
+/* Optional: cap the search-grid height on very small screens */
+@media (max-height: 700px) {
+  .dropdown-menu {
+    max-height: 55vh;
+  }
+}
+
+
+/* ====== Buttons (inert) ====== */
 .btn {
-  border-radius: 14px;
+  border-radius: var(--radius-md);
   padding: 12px 18px;
-  border: 1px solid var(--stone-300);
-  background: white;
+  border: 1px solid #d4cec9;
+  background: #fff;
+  font-weight: 600;
   cursor: default;
 }
-.btn-primary { background: var(--accent); border: none; font-weight: 800; }
-.btn-pill { padding: 6px 10px; }
+.btn-primary {
+  background: var(--accent);
+  border: none;
+  font-weight: 800;
+}
 
-/* RESULTS */
-.results { margin-top: 18px; }
+/* ====== Results ====== */
+.results { margin-top: var(--space-4); }
 .results-header {
-  display: flex; justify-content: space-between; align-items: center;
-  margin-bottom: 12px;
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: var(--space-3);
 }
 .results-title { font-weight: 800; letter-spacing: .04em; }
 
-.result-row {
-  background: var(--stone-200);
-  border-radius: 16px;
-  height: 64px;
-  display: flex; align-items: center;
-  padding: 0 14px;
-  margin-bottom: 12px;
-}
-
-/* FILTER PILL */
 .filter-pill {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: var(--stone-200);
-  border: 1px solid var(--stone-300);
+  background: #efebe8;
+  border: 1px solid var(--line);
   border-radius: 999px;
   padding: 8px 12px;
+}
+
+.result-row {
+  height: 64px;
+  border-radius: 16px;
+  background: #ece7e3;
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  margin-bottom: 12px;
+}
+
+/* ====== Responsive ====== */
+@media (max-width: 980px) {
+  .app { grid-template-columns: 200px 1fr; }
+  .card { width: 100%; }
+  .col-8 { grid-column: span 12; }
+  .col-6 { grid-column: span 12; }
+  .col-4 { grid-column: span 12; }
+  .col-3 { grid-column: span 6; }
 }
