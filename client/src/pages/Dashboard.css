@@ -160,7 +160,17 @@
   justify-content: flex-start;
   align-items: center;
   margin-top: var(--space-2);
+
+  /* NEW: anchor */
+  position: sticky;
+  top: 8px;                 /* adjust if you want it lower/higher in the card */
+  z-index: 5;
+  background: var(--panel);
+  padding: 6px 8px;
+  border-radius: 10px;
+  box-shadow: 0 4px 14px rgba(0,0,0,.04);
 }
+
 
 /* --- Icon button for the caret --- */
 .btn.icon {
@@ -174,57 +184,106 @@
   padding: 0;
 }
 
-/* --- Dropdown menu --- */
+/* --- Dropdown layout + scrolling --- */
+/* Drop-down container remains a simple positioning context */
 .dropdown {
   position: relative;
 }
+
+/* CHANGE: use fixed positioning so the menu is locked to viewport.
+   All placement (top/left/max-height) will be set inline from TSX. */
 .dropdown-menu {
-  position: absolute;
-  top: 64px;             /* sits below the caret button */
-  left: 0;
-  min-width: 260px;
-  background: #fff;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  box-shadow: var(--shadow-md);
-  padding: 10px;
-  z-index: 30;
+  position: fixed;          /* <— was absolute */
+  z-index: 1000;
+  width: min(900px, 86vw);
+  /* top/left are provided inline via style={} */
+  /* max-height is provided inline via style={} */
+
+  overflow: auto;           /* internal scroll only */
+  padding: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 10px;
+  background: var(--card, #ffffff);
+  box-shadow: 0 12px 28px rgba(0,0,0,.35);
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px 14px;
 }
+
+/* Drop-up class kept for styling; placement handled inline */
+.dropdown-menu.drop-up {}
+
+/* Title and footer span full width of the grid */
+.dropdown-title,
+.dropdown-footer {
+  grid-column: 1 / -1;
+}
+
 .dropdown-title {
-  font-weight: 800;
-  font-size: 12px;
-  letter-spacing: .08em;
-  color: var(--ink-subtle);
-  margin: 4px 6px 8px;
+  position: relative;
+  top: 0;
+  padding-bottom: 8px;
+  margin: -12px -12px 6px -12px; /* stretch to edges */
+  padding: 10px 12px;
+  background: inherit;
+  font-weight: 600;
+  border-bottom: 1px solid rgba(255,255,255,.08);
 }
+
+/* Footer pinned to bottom */
+.dropdown-footer {
+  position: sticky;
+  bottom: 0;
+  margin: 6px -12px -12px -12px;
+  padding: 8px 12px 10px 12px;
+  background: linear-gradient(to top, rgb(255, 255, 255), rgba(0,0,0,0));
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+/* Checkbox items look tidy in a grid cell */
 .dropdown-item {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   padding: 8px 6px;
   border-radius: 8px;
   cursor: pointer;
 }
+
 .dropdown-item:hover {
-  background: #f7f5f3;
+  background: rgba(237, 229, 229, 0.2);
 }
+
 .dropdown-item input {
   transform: translateY(1px);
 }
-.dropdown-footer {
-  display: flex;
-  justify-content: space-between;
-  padding: 6px;
-  margin-top: 6px;
-  border-top: 1px dashed var(--line);
-}
+
+/* Buttons */
 .btn.tiny {
-  padding: 6px 10px;
   font-size: 12px;
+  padding: 6px 10px;
   border-radius: 8px;
+  border: 1px solid rgba(255,255,255,.18);
+  background: rgba(255, 255, 255, 0.06);
 }
 
-/* keep your col-12/8/6/4/3 grid classes from earlier revamp */
+.btn.tiny:hover {
+  background: rgba(255,255,255,.12);
+}
+
+/* The actions row should never cause layout jumps */
+.actions {
+  align-items: center;
+}
+
+/* Optional: cap the search-grid height on very small screens */
+@media (max-height: 700px) {
+  .dropdown-menu {
+    max-height: 55vh;
+  }
+}
 
 
 /* ====== Buttons (inert) ====== */
