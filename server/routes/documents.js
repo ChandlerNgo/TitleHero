@@ -1,5 +1,5 @@
 const express = require('express');
-const getPool = require('../config');
+const { getPool, getOpenAPIKey } = require('../config');
 const app = express();
 
 app.get('/documents', async (req, res) => {
@@ -80,14 +80,12 @@ app.post('/documents', async (req, res) => {
     }
 });
 
-
-
 const multer = require('multer');
 const sharp = require('sharp');
 const { OpenAI } = require('openai');
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const openai = new OpenAI({ apiKey: await getOpenAPIKey() });
 
 // Helper: ensure lookup row exists and return its ID (or null if name is null/blank)
 async function ensureLookupId(pool, tableName, name) {
