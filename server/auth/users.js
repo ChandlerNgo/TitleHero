@@ -1,15 +1,10 @@
-const mysql = require('mysql2/promise');
 const bcrypt = require('bcrypt');
-
-const pool = mysql.createPool({
-    host: 'localhost',
-    user: 'root',  // replace with your MySQL username
-    password: '',  // replace with your MySQL password
-    database: 'landtitle'
-});
+const getPool = require('../config');
 
 async function authenticateUser(username, password) {
     try {
+        const pool = await getPool();
+        
         // First check admin table
         const [adminRows] = await pool.execute(
             'SELECT adminID as id, username, password, "admin" as role FROM Admin WHERE username = ?',
@@ -49,6 +44,7 @@ async function hashPassword(password) {
 
 // Example function to create a new user with a hashed password
 async function createUser(username, password, role = 'user') {
+    const pool = await getPool();
     const hashedPassword = await hashPassword(password);
     const [result] = await pool.execute(
         'INSERT INTO User (username, password, role) VALUES (?, ?, ?)',
@@ -59,6 +55,7 @@ async function createUser(username, password, role = 'user') {
 
 // Example function to create a new admin with a hashed password
 async function createAdmin(username, password, permissions = null) {
+    const pool = await getPool();
     const hashedPassword = await hashPassword(password);
     const [result] = await pool.execute(
         'INSERT INTO Admin (username, password, permissions) VALUES (?, ?, ?)',
