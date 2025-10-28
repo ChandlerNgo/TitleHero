@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import "./Dashboard.css";
+import { isAdmin } from "../utils/auth";
 
 /** Field registry: id must be unique and stable */
 const FIELD_DEFS = [
@@ -75,6 +76,7 @@ export default function Dashboard() {
     console.log("PAYLOAD:", payload);
     alert("Check console for payload 👀");
   };
+  const adminMode = isAdmin();
 
   return (
     <div className="app">
@@ -87,6 +89,7 @@ export default function Dashboard() {
       {/* Header */}
       <header className="header">
         <div className="breadcrumbs">DASHBOARD</div>
+        {adminMode && <span style={{ color: '#ff4444', fontWeight: 'bold', marginRight: '10px' }}>ADMIN MODE</span>}
         <div className="profile">
           <div>ENTER NAME</div>
           <div className="avatar" />
