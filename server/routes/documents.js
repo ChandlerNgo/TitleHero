@@ -85,7 +85,6 @@ const sharp = require('sharp');
 const { OpenAI } = require('openai');
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
-const openai = new OpenAI({ apiKey: await getOpenAPIKey() });
 
 // Helper: ensure lookup row exists and return its ID (or null if name is null/blank)
 async function ensureLookupId(pool, tableName, name) {
@@ -108,6 +107,7 @@ function toDecimalOrNull(v) {
 
 // Accepts TIFFs in form field `files`
 app.post('/documents/ocr', upload.array('files', 20), async (req, res) => {
+  const openai = new OpenAI({ apiKey: await getOpenAPIKey() });
   try {
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({ error: 'No files uploaded. Send TIFFs in `files`.' });
