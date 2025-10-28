@@ -115,17 +115,43 @@ app.post('/documents/ocr', upload.array('files', 20), async (req, res) => {
 
     // 1) Convert all TIFF pages to PNG data URLs for the Vision API
     const imageParts = [];
+    const pageErrors = [];
+
     for (const f of req.files) {
-      // TIFF may be multi-page; sharp can iterate pages via { page: i }
-      const meta = await sharp(f.buffer).metadata();
-      const pages = meta.pages || 1;
-      for (let i = 0; i < pages; i++) {
-        const png = await sharp(f.buffer, { page: i }).png().toBuffer();
-        const b64 = png.toString('base64');
-        imageParts.push({ type: 'input_image', image_url: `data:image/png;base64,${b64}` });
+      try {
+        const meta = await sharp(f.buffer, { failOnError: false }).metadata();
+        const pages = Number.isFinite(meta.pages) && meta.pages > 0 ? meta.pages : 1;
+
+        for (let i = 0; i < pages; i++) {
+          try {
+            const png = await sharp(f.buffer, {
+                page: i,
+                limitInputPixels: false,   // allow very large pages
+                failOnError: false         // don’t throw on minor decode issues
+              })
+              // optional: if your TIFFs are 1-bit FAX/CCITT, this helps normalize
+              .ensureAlpha()               // normalize channels
+              .png({ compressionLevel: 9 })// lossless, smaller
+              .toBuffer();
+
+            const b64 = png.toString('base64');
+            imageParts.push({ type: 'input_image', image_url: `data:image/png;base64,${b64}` });
+          } catch (err) {
+            pageErrors.push({ file: f.originalname, page: i, reason: String(err?.message || err) });
+            // continue to next page/file
+          }
+        }
+      } catch (err) {
+        pageErrors.push({ file: f.originalname, page: 'metadata', reason: String(err?.message || err) });
       }
     }
 
+    /* if (imageParts.length === 0) {
+      return res.status(422).json({
+        error: 'Failed to decode any TIFF pages',
+        details: pageErrors.slice(0, 10) // include a sample for debugging
+      });
+    } */
     // 2) Instruction + JSON Schema for Structured Outputs
     const instruction = {
       type: 'input_text',
@@ -142,7 +168,7 @@ app.post('/documents/ocr', upload.array('files', 20), async (req, res) => {
         '"ai_extraction": { "accuracy": 0.0, "fieldsExtracted": { "supporting_keys": "..." }, "extraction_notes": [] } } ' +
         'Rules: normalize dates to YYYY-MM-DD; represent money/acreage as decimals; separate multiple parties with a semicolon; ' +
         'use null (not empty strings) if unknown; merge multi-line legal descriptions; ensure instrumentType reflects legal purpose (e.g., Warranty Deed, Lien, Release); ' +
-        'fileStampDate must come from the physical clerk stamp; filingDate from the “Filed/Recorded” label; verify header stamps vs body text; output ONLY the JSON.'
+        'fileStampDate must come from the physical clerk stamp; filingDate from the “Filed/Recorded” label; verify header stamps vs body text; output ONLY the JSON. Do not make up data. Only use data that is extracted from the uploaded files.'
     };
 
     const response_format = {
