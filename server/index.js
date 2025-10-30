@@ -6,6 +6,7 @@ const router = express.Router();
 const documentsRoutes = require('./routes/documents');
 const loginRoutes = require('./routes/login');
 const testRoutes = require('./routes/test');
+const healthcheckRoutes = require('./routes/healthcheck');
 
 const app = express();
 app.use(express.json());
@@ -13,6 +14,8 @@ app.use(express.urlencoded({ extended: true }));
 
 (async () => {
   await getPool();
+
+  app.use(healthcheckRoutes);
 
   app.use('/api', router); // prefix all routes with /api
 
