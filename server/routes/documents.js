@@ -371,4 +371,79 @@ app.post('/documents/ocr', upload.array('files', 20), async (req, res) => {
   }
 });
 
+//SEARCH: GET /documents/search
+app.get('/documents/search', async (req, res) => {
+  try {
+    const pool = await getPool();
+
+    //fields we accept, broken into sets of either text, numbers, or dates :o
+    const textLike = new Set([
+      'instrumentNumber','book','volume','page','grantor','grantee','instrumentType',
+      'remarks','legalDescription','subBlock','abstractText','propertyType',
+      'marketShare','sortArray','address','CADNumber','CADNumber2','GLOLink','fieldNotes',
+      'finalizedBy','nFileReference'
+    ]);
+    const numericEq = new Set([
+      'documentID','abstractID','bookTypeID','subdivisionID','countyID','exportFlag','GFNNumber'
+    ]);
+    const dateEq = new Set(['fileStampDate','filingDate','created_at','updated_at']);
+
+    const limit  = Math.min(parseInt(req.query.limit ?? '50', 10) || 50, 200);
+    const offset = Math.max(parseInt(req.query.offset ?? '0', 10) || 0, 0);
+
+    const where = [];
+    const params = [];
+
+    // applying those field based filters yippee
+    for (const [k, vRaw] of Object.entries(req.query)) {
+      if (k === 'criteria' || k === 'limit' || k === 'offset') continue;
+      const v = String(vRaw).trim();
+      if (!v) continue;
+
+      if (numericEq.has(k)) {
+        where.push(`\`${k}\` = ?`);
+        params.push(v);
+      } else if (dateEq.has(k)) {
+        // allow exact date or a simple range "YYYY-MM-DD..YYYY-MM-DD"
+        const range = v.split('..');
+        if (range.length === 2) {
+          where.push(`\`${k}\` BETWEEN ? AND ?`);
+          params.push(range[0], range[1]);
+        } else {
+          where.push(`DATE(\`${k}\`) = DATE(?)`);
+          params.push(v);
+        }
+      } else if (textLike.has(k)) {
+        where.push(`\`${k}\` LIKE ?`);
+        params.push(`%${v}%`);
+      }
+    }
+
+    // general free text
+    const criteria = String(req.query.criteria ?? '').trim();
+    if (criteria) {
+      const critCols = [
+        'instrumentNumber','grantor','grantee','instrumentType','legalDescription',
+        'remarks','address','CADNumber','CADNumber2','book','volume','page','abstractText','fieldNotes'
+      ];
+      const orParts = critCols.map(c => `\`${c}\` LIKE ?`).join(' OR ');
+      where.push(`(${orParts})`);
+      for (let i = 0; i < critCols.length; i++) params.push(`%${criteria}%`);
+    }
+    //searching 
+    let sql = 'SELECT * FROM Document';
+    if (where.length) sql += ' WHERE ' + where.join(' AND ');
+    sql += ' ORDER BY (updated_at IS NULL), updated_at DESC, (created_at IS NULL), created_at DESC';
+    sql += ' LIMIT ? OFFSET ?';
+    params.push(limit, offset);
+
+    const [rows] = await pool.query(sql, params);
+    res.status(200).json({ rows, limit, offset, count: rows.length });
+  } catch (err) { // error catching :)
+    console.error('Error searching documents:', err);
+    res.status(500).json({ error: 'Failed to search documents' });
+  }
+});
+
+
 module.exports = app;

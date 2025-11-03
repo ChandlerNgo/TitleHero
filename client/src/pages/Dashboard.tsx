@@ -181,11 +181,40 @@ export default function Dashboard() {
   const onChange = (id: FieldId, v: string) =>
     setValues(prev => ({ ...prev, [id]: v }));
 
-  // KEEP SUBMIT EXACTLY AS BEFORE (no DB hookup changes)
-  const submit = () => {
-    const payload = Object.fromEntries(active.map(id => [id, values[id]]));
-    alert("SEARCH USING: " + Array.from(activeSet));
-    alert("PAYLOAD: " + payload);
+  const [loading, setLoading] = useState(false);
+  const [error, setError]   = useState<string | null>(null);
+  const [results, setResults] = useState<any[]>([]);
+
+  // submitting function, then using the search from documents.js
+  const submit = async () => {
+    setLoading(true);
+    setError(null);
+
+    // Build querystring from active fields with non-empty values
+    const params = new URLSearchParams();
+    for (const id of active) {
+      const v = values[id]?.trim?.() ?? "";
+      if (v) params.append(id, v);
+    }
+
+    // hit the search route
+    try {
+      const res = await fetch(`/api/documents/search?${params.toString()}`, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' }
+      });
+      if (!res.ok) {
+        const t = await res.text();
+        throw new Error(`Server ${res.status}: ${t}`);
+      }
+      const data = await res.json();
+      setResults(Array.isArray(data.rows) ? data.rows : []);
+    } catch (e:any) {
+      setError(e?.message || 'Search failed');
+      setResults([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const adminMode = isAdmin();
@@ -296,24 +325,97 @@ export default function Dashboard() {
   </button>
 </div>
 
-          </form>
+    </form>
 
-          {/* Results scaffold */}
-          <div className="results">
-            <div className="results-header">
-              <div className="results-title">RESULTS</div>
-              <div className="filter-pill">FILTER ▾</div>
+    {/* Results scaffold */}
+      <div className="results">
+      <div className="results-header">
+        <div className="results-title">
+          RESULTS {loading ? '…' : `(${results.length})`}
+        </div>
+        {error && <div className="filter-pill" style={{color: '#b00'}}>{error}</div>}
+      </div>
+
+      {results.length === 0 && !loading && !error && (
+        <div className="result-row" style={{background:'#f3efec'}}>
+          No matches.
+        </div>
+      )}
+
+      {results.map(row => (
+        <div key={row.documentID} className="result-row">
+          {/* header */}
+          <div className="doc-head">
+            <div className="doc-title">
+              <span className="doc-id">ID {row.documentID}</span>
+              {row.instrumentNumber && (
+                <span className="doc-instrument">Instrument: {row.instrumentNumber}</span>
+              )}
             </div>
-            <div className="result-row" />
-            <div className="result-row" />
-            <div className="result-row" />
-            <div className="result-row" />
+
+            <div className="badges">
+              {row.instrumentType && <span className="badge">{row.instrumentType}</span>}
+              {row.propertyType && <span className="badge">{row.propertyType}</span>}
+              {row.exportFlag ? <span className="badge">Exported</span> : null}
+            </div>
           </div>
-        </section>
+
+          {/* meta */}
+          <div className="doc-meta">
+            <div className="kv">
+              <b>Book/Vol/Page:</b>
+              <span className="mono">
+                {row.book ?? '—'}{row.volume ? ` ${row.volume}` : ''}{row.page ? ` / ${row.page}` : ''}
+              </span>
+            </div>
+
+            <div className="kv wide">
+              <b>Parties:</b>
+              <span>{fmtParty(row.grantor)} <span className="muted">→</span> {fmtParty(row.grantee)}</span>
+            </div>
+
+            <div className="kv">
+              <b>CountyID:</b> <span>{row.countyID ?? '—'}</span>
+            </div>
+
+            <div className="kv">
+              <b>Filed:</b> <span className="mono">{toDate(row.filingDate) ?? '—'}</span>
+            </div>
+
+            <div className="kv">
+              <b>File Stamp:</b> <span className="mono">{toDate(row.fileStampDate) ?? '—'}</span>
+            </div>
+          </div>
+
+          {/* legal preview */}
+          <div className="legal">
+            <div className="legal-label"><b>Legal:</b></div>
+            <div className="legal-content">
+              {row.legalDescription?.trim() || '—'}
+            </div>
+          </div>
+
+        </div>
+      ))}
+
+    </div>
+       </section>
       </main>
     </div>
   );
 }
+
+function toDate(d?: string | null) {
+  if (!d) return null;
+  const dt = new Date(d);
+  if (Number.isNaN(dt.getTime())) return null;
+  return dt.toISOString().slice(0,10);
+}
+
+function fmtParty(s?: string | null) {
+  return s && s.trim() ? s : '—';
+}
+
 
 function spanClass(span: number) {
   if (span === 12) return "col-12";
