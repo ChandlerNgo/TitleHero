@@ -62,11 +62,166 @@ const FIELD_DEFS = [
 
 type FieldId = typeof FIELD_DEFS[number]["id"];
 
+/* ----------------------- Upload Modal ----------------------- */
+type UploadModalProps = {
+  open: boolean;
+  onClose: () => void;
+  onUploaded?: (payload: { documentID: number; ai_extraction?: any } | null) => void;
+};
+
+function UploadModal({ open, onClose, onUploaded }: UploadModalProps) {
+  const [files, setFiles] = useState<File[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [createdId, setCreatedId] = useState<number | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (!open) {
+      setFiles([]);
+      setErr(null);
+      setBusy(false);
+      setCreatedId(null);
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  const onPick = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+    setFiles(prev => [...prev, ...Array.from(e.target.files!)]);
+  };
+
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length) {
+      setFiles(prev => [...prev, ...Array.from(e.dataTransfer.files)]);
+    }
+  };
+
+  const removeAt = (i: number) => {
+    setFiles(prev => prev.filter((_, idx) => idx !== i));
+  };
+
+  const upload = async () => {
+    if (!files.length) return;
+    setBusy(true);
+    setErr(null);
+    setCreatedId(null);
+
+    try {
+      const baseUrl =
+        import.meta.env.VITE_API_TARGET ||
+        "https://5mj0m92f17.execute-api.us-east-2.amazonaws.com";
+
+      const form = new FormData();
+      // Multer field name your server expects:
+      files.forEach(f => form.append("files", f, f.name));
+
+      // Your express route is '/documents/ocr' and you front it with '/api'
+      const res = await fetch(`${baseUrl}/api/documents/ocr`, {
+        method: "POST",
+        body: form
+        // No manual Content-Type header for FormData
+      });
+
+      if (!res.ok) {
+        const t = await res.text();
+        throw new Error(`Upload/OCR failed (${res.status}): ${t}`);
+      }
+
+      const data = await res.json(); // { message, documentID, ai_extraction }
+      setCreatedId(data?.documentID ?? null);
+      onUploaded?.(data ?? null);
+
+      // Optional: auto-close after a short delay
+      // setTimeout(onClose, 800);
+    } catch (e: any) {
+      setErr(e?.message || "Upload failed");
+      onUploaded?.(null);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Upload documents">
+      <div className="modal">
+        <div className="modal-header">
+          <h3>Upload Documents</h3>
+          <button className="btn icon" onClick={onClose} aria-label="Close">✕</button>
+        </div>
+
+        <div
+          className={`dropzone ${isDragging ? "dragging" : ""}`}
+          onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+          onDragLeave={() => setIsDragging(false)}
+          onDrop={onDrop}
+          onClick={() => inputRef.current?.click()}
+          role="button"
+          tabIndex={0}
+        >
+          <input
+            ref={inputRef}
+            type="file"
+            multiple
+            accept=".tif,.tiff,.pdf,.png,.jpg,.jpeg,.heic,.webp"
+            onChange={onPick}
+            style={{ display: "none" }}
+          />
+          <div className="dropzone-inner">
+            <div className="big-arrow">⬆</div>
+            <div className="dz-title">Drag & drop files here</div>
+            <div className="dz-sub">or click to select (TIFF, PDF, PNG, JPG)</div>
+          </div>
+        </div>
+
+        {!!files.length && (
+          <div className="file-list">
+            {files.map((f, i) => (
+              <div key={i} className="file-row">
+                <div className="file-name">{f.name}</div>
+                <div className="file-size">{(f.size/1024/1024).toFixed(2)} MB</div>
+                <button className="btn tiny" onClick={() => removeAt(i)}>Remove</button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {err && <div className="error-text">{err}</div>}
+        {createdId && (
+          <div style={{ margin: "8px 16px", color: "#0a7", fontWeight: 600 }}>
+            ✅ Created Document ID: {createdId}
+          </div>
+        )}
+
+        <div className="modal-actions">
+          <button className="btn" onClick={onClose} disabled={busy}>Cancel</button>
+          <button className="btn btn-primary" onClick={upload} disabled={!files.length || busy}>
+            {busy ? "Uploading & Extracting…" : "Upload to OCR"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+/* ----------------------- Dashboard ----------------------- */
 export default function Dashboard() {
   // Start with your original common set; user can "Select all" from dropdown.
-  const [active, setActive] = useState<FieldId[]>([
-    "criteria"
-  ]);
+  const [active, setActive] = useState<FieldId[]>(["criteria"]);
 
   // Initialize values for all fields to empty strings
   const INITIAL_VALUES = useMemo(
@@ -169,8 +324,6 @@ export default function Dashboard() {
     return () => document.removeEventListener("mousedown", onDoc);
   }, [menuOpen]);
 
-
-
   const onChange = (id: FieldId, v: string) =>
     setValues(prev => ({ ...prev, [id]: v }));
 
@@ -178,22 +331,22 @@ export default function Dashboard() {
   const [error, setError]   = useState<string | null>(null);
   const [results, setResults] = useState<any[]>([]);
 
+  // NEW: upload modal state
+  const [showUpload, setShowUpload] = useState(false);
+
   // submitting function, then using the search from documents.js
   const submit = async () => {
     setLoading(true);
     setError(null);
 
-    // Build querystring from active fields with non-empty values
     const params = new URLSearchParams();
     for (const id of active) {
       const v = values[id]?.trim?.() ?? "";
       if (v) params.append(id, v);
     }
 
-    // hit the search route
     try {
-      const baseUrl = import.meta.env.VITE_API_TARGET || 'https://5mj0m92f17.execute-api.us-east-2.amazonaws.com'
-
+      const baseUrl = import.meta.env.VITE_API_TARGET || 'https://5mj0m92f17.execute-api.us-east-2.amazonaws.com';
       const res = await fetch(`${baseUrl}/api/documents/search?${params.toString()}`, {
         method: 'GET',
         headers: { 'Accept': 'application/json' }
@@ -214,13 +367,19 @@ export default function Dashboard() {
 
   const adminMode = isAdmin();
 
-
   return (
     <div className="app">
       {/* Sidebar */}
       <aside className="sidebar">
         <div className="brand">TITLEHERO</div>
-        <button className="upload-btn" onClick={() => void 0} aria-label="Upload">↑</button>
+        <button
+          className="upload-btn"
+          onClick={() => setShowUpload(true)}
+          aria-label="Upload"
+          title="Upload"
+        >
+          ↑
+        </button>
       </aside>
 
       {/* Header */}
@@ -262,140 +421,148 @@ export default function Dashboard() {
             ))}
 
             {/* Actions */}
-<div className="actions col-12">
-  <div className="dropdown" ref={menuRef}>
-    <button
-      type="button"
-      className="btn icon"
-      aria-haspopup="menu"
-      aria-expanded={menuOpen}
-      onClick={() => setMenuOpen(v => !v)}
-      ref={triggerRef}                    // <-- NEW
-    >
-      ▾
-    </button>
+            <div className="actions col-12">
+              <div className="dropdown" ref={menuRef}>
+                <button
+                  type="button"
+                  className="btn icon"
+                  aria-haspopup="menu"
+                  aria-expanded={menuOpen}
+                  onClick={() => setMenuOpen(v => !v)}
+                  ref={triggerRef}
+                >
+                  ▾
+                </button>
 
-    {menuOpen && (
-      <div
-        role="menu"
-        className={`dropdown-menu ${dropUp ? "drop-up" : ""}`}
-        aria-label="Select fields to search by"
-        style={menuStyle}                 // <-- NEW (locks to viewport)
-      >
-      <div className="dropdown-title">Search by…</div>
+                {menuOpen && (
+                  <div
+                    role="menu"
+                    className={`dropdown-menu ${dropUp ? "drop-up" : ""}`}
+                    aria-label="Select fields to search by"
+                    style={menuStyle}
+                  >
+                    <div className="dropdown-title">Search by…</div>
 
-        {FIELD_DEFS.map(f => (
-          <label key={f.id} className="dropdown-item">
-            <input
-              type="checkbox"
-              checked={activeSet.has(f.id)}
-              onChange={() => toggleField(f.id)}
-            />
-            <span>{f.label}</span>
-          </label>
-        ))}
+                    {FIELD_DEFS.map(f => (
+                      <label key={f.id} className="dropdown-item">
+                        <input
+                          type="checkbox"
+                          checked={activeSet.has(f.id)}
+                          onChange={() => toggleField(f.id)}
+                        />
+                        <span>{f.label}</span>
+                      </label>
+                    ))}
 
-        <div className="dropdown-footer">
-          <button
-            type="button"
-            className="btn tiny"
-            onClick={() => setActive(FIELD_DEFS.map(f => f.id))}
-          >
-            Select all
-          </button>
-          <button
-            type="button"
-            className="btn tiny"
-            onClick={() => setActive([])}
-          >
-            Clear
-          </button>
-        </div>
-      </div>
-    )}
-  </div>
+                    <div className="dropdown-footer">
+                      <button
+                        type="button"
+                        className="btn tiny"
+                        onClick={() => setActive(FIELD_DEFS.map(f => f.id))}
+                      >
+                        Select all
+                      </button>
+                      <button
+                        type="button"
+                        className="btn tiny"
+                        onClick={() => setActive([])}
+                      >
+                        Clear
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
 
-  <button type="button" className="btn btn-primary" onClick={submit}>
-    SEARCH
-  </button>
-</div>
+              <button type="button" className="btn btn-primary" onClick={submit}>
+                SEARCH
+              </button>
+            </div>
+          </form>
 
-    </form>
-
-    {/* Results scaffold */}
-      <div className="results">
-      <div className="results-header">
-        <div className="results-title">
-          RESULTS {loading ? '…' : `(${results.length})`}
-        </div>
-        {error && <div className="filter-pill" style={{color: '#b00'}}>{error}</div>}
-      </div>
-
-      {results.length === 0 && !loading && !error && (
-        <div className="result-row" style={{background:'#f3efec'}}>
-          No matches.
-        </div>
-      )}
-
-      {results.map(row => (
-        <div key={row.documentID} className="result-row">
-          {/* header */}
-          <div className="doc-head">
-            <div className="doc-title">
-              <span className="doc-id">ID {row.documentID}</span>
-              {row.instrumentNumber && (
-                <span className="doc-instrument">Instrument: {row.instrumentNumber}</span>
-              )}
+          {/* Results scaffold */}
+          <div className="results">
+            <div className="results-header">
+              <div className="results-title">
+                RESULTS {loading ? '…' : `(${results.length})`}
+              </div>
+              {error && <div className="filter-pill" style={{color: '#b00'}}>{error}</div>}
             </div>
 
-            <div className="badges">
-              {row.instrumentType && <span className="badge">{row.instrumentType}</span>}
-              {row.propertyType && <span className="badge">{row.propertyType}</span>}
-              {row.exportFlag ? <span className="badge">Exported</span> : null}
-            </div>
+            {results.length === 0 && !loading && !error && (
+              <div className="result-row" style={{background:'#f3efec'}}>
+                No matches.
+              </div>
+            )}
+
+            {results.map(row => (
+              <div key={row.documentID} className="result-row">
+                {/* header */}
+                <div className="doc-head">
+                  <div className="doc-title">
+                    <span className="doc-id">ID {row.documentID}</span>
+                    {row.instrumentNumber && (
+                      <span className="doc-instrument">Instrument: {row.instrumentNumber}</span>
+                    )}
+                  </div>
+
+                  <div className="badges">
+                    {row.instrumentType && <span className="badge">{row.instrumentType}</span>}
+                    {row.propertyType && <span className="badge">{row.propertyType}</span>}
+                    {row.exportFlag ? <span className="badge">Exported</span> : null}
+                  </div>
+                </div>
+
+                {/* meta */}
+                <div className="doc-meta">
+                  <div className="kv">
+                    <b>Book/Vol/Page:</b>
+                    <span className="mono">
+                      {row.book ?? '—'}{row.volume ? ` ${row.volume}` : ''}{row.page ? ` / ${row.page}` : ''}
+                    </span>
+                  </div>
+
+                  <div className="kv wide">
+                    <b>Parties:</b>
+                    <span>{fmtParty(row.grantor)} <span className="muted">→</span> {fmtParty(row.grantee)}</span>
+                  </div>
+
+                  <div className="kv">
+                    <b>CountyID:</b> <span>{row.countyID ?? '—'}</span>
+                  </div>
+
+                  <div className="kv">
+                    <b>Filed:</b> <span className="mono">{toDate(row.filingDate) ?? '—'}</span>
+                  </div>
+
+                  <div className="kv">
+                    <b>File Stamp:</b> <span className="mono">{toDate(row.fileStampDate) ?? '—'}</span>
+                  </div>
+                </div>
+
+                {/* legal preview */}
+                <div className="legal">
+                  <div className="legal-label"><b>Legal:</b></div>
+                  <div className="legal-content">
+                    {row.legalDescription?.trim() || '—'}
+                  </div>
+                </div>
+
+              </div>
+            ))}
           </div>
-
-          {/* meta */}
-          <div className="doc-meta">
-            <div className="kv">
-              <b>Book/Vol/Page:</b>
-              <span className="mono">
-                {row.book ?? '—'}{row.volume ? ` ${row.volume}` : ''}{row.page ? ` / ${row.page}` : ''}
-              </span>
-            </div>
-
-            <div className="kv wide">
-              <b>Parties:</b>
-              <span>{fmtParty(row.grantor)} <span className="muted">→</span> {fmtParty(row.grantee)}</span>
-            </div>
-
-            <div className="kv">
-              <b>CountyID:</b> <span>{row.countyID ?? '—'}</span>
-            </div>
-
-            <div className="kv">
-              <b>Filed:</b> <span className="mono">{toDate(row.filingDate) ?? '—'}</span>
-            </div>
-
-            <div className="kv">
-              <b>File Stamp:</b> <span className="mono">{toDate(row.fileStampDate) ?? '—'}</span>
-            </div>
-          </div>
-
-          {/* legal preview */}
-          <div className="legal">
-            <div className="legal-label"><b>Legal:</b></div>
-            <div className="legal-content">
-              {row.legalDescription?.trim() || '—'}
-            </div>
-          </div>
-
-        </div>
-      ))}
-
-    </div>
-       </section>
+        </section>
       </main>
+
+      {/* Upload modal */}
+      <UploadModal
+        open={showUpload}
+        onClose={() => setShowUpload(false)}
+        onUploaded={() => {
+          // Optional: re-run search to show new records right away
+          // submit();
+        }}
+      />
     </div>
   );
 }
@@ -410,7 +577,6 @@ function toDate(d?: string | null) {
 function fmtParty(s?: string | null) {
   return s && s.trim() ? s : '—';
 }
-
 
 function spanClass(span: number) {
   if (span === 12) return "col-12";
