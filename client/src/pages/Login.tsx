@@ -1,5 +1,6 @@
 // src/pages/Login.tsx
 import React, { useState } from "react";
+import axios from 'axios';
 import "./Login.css";
 
 interface LoginFormData {
@@ -22,46 +23,32 @@ export default function Login({ onEnter }: { onEnter: () => void }) {
     }));
   };
 
-  // Temporary login handler until backend is implemented
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Debug log to see what's being submitted
     console.log('Login attempt with:', formData);
-    
-    // Temporary login logic (remove this when backend is ready)
-    if (formData.username === 'admin' && formData.password === 'admin123') {
-      console.log('Admin login successful');
-      localStorage.setItem('role', 'admin');
-      localStorage.setItem('username', formData.username);
-      onEnter();
-    } else if (formData.username === 'user' && formData.password === 'user123') {
-      console.log('User login successful');
-      localStorage.setItem('role', 'user');
-      localStorage.setItem('username', formData.username);
-      onEnter();
-    } else {
-      console.log('Login failed - Invalid credentials');
-      setError('Invalid username or password');
-    }
-    
-    // Comment out the actual API call for now
-    /* 
+
     try {
-      // This will be uncommented when backend is ready
-      const response = await axios.post<LoginResponse>('http://localhost:3001/api/login', formData);
-      if (response.data.token) {
-        localStorage.setItem('token', response.data.token);
-        localStorage.setItem('role', response.data.role);
-        localStorage.setItem('username', response.data.username);
+      console.log('Sending login request with:', formData);
+      
+      const response = await axios.post('http://localhost:5000/api/login', formData);
+      console.log('Server response:', response.data);
+      
+      if (response.data.success) {
+        localStorage.setItem('token', response.data.token || '');
+        localStorage.setItem('role', response.data.user.role || '');
+        localStorage.setItem('username', response.data.user.name || '');
         onEnter();
-        // When backend is wired, App's view will change via onEnter; avoid full-page redirects here
+      } else {
+        throw new Error(response.data.error || 'Login failed');
       }
     } catch (err) {
-      setError('Invalid username or password');
       console.error('Login error:', err);
+      if (axios.isAxiosError(err)) {
+        setError(err.response?.data?.error || 'Could not connect to server');
+      } else {
+        setError('Invalid username or password');
+      }
     }
-    */
   };
 
   return (
@@ -80,10 +67,12 @@ export default function Login({ onEnter }: { onEnter: () => void }) {
           <div className="field">
             <label htmlFor="org">Title Hero, enter cool slogan here.</label>
           </div>
-        
-        {/* login information will be here! Does not do anything right now */}
 
-          {error && <div className="error-message" style={{ color: 'red', marginBottom: '1rem' }}>{error}</div>}
+          {error && (
+            <div className="error-message" style={{ color: 'red', marginBottom: '1rem' }}>
+              {error}
+            </div>
+          )}
 
           <div className="row-2">
             <div className="field">
