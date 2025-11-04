@@ -199,7 +199,9 @@ export default function Dashboard() {
 
     // hit the search route
     try {
-      const res = await fetch(`/api/documents/search?${params.toString()}`, {
+      const baseUrl = import.meta.env.VITE_API_TARGET || 'https://5mj0m92f17.execute-api.us-east-2.amazonaws.com'
+
+      const res = await fetch(`${baseUrl}/api/documents/search?${params.toString()}`, {
         method: 'GET',
         headers: { 'Accept': 'application/json' }
       });
