@@ -57,7 +57,7 @@ const FIELD_DEFS = [
   { id: "updated_at",       label: "updated_at",       placeholder: "ISO timestamp",                type: "input",   span: 4 },
 
   // Optional freeform criteria (kept from your original UI)
-  { id: "criteria",         label: "Search Criteria",  placeholder: "",                             type: "textarea",span: 6 },
+  { id: "criteria",         label: "Search All Fields",  placeholder: "",                             type: "textarea",span: 6 },
 ] as const;
 
 type FieldId = typeof FIELD_DEFS[number]["id"];
@@ -65,14 +65,7 @@ type FieldId = typeof FIELD_DEFS[number]["id"];
 export default function Dashboard() {
   // Start with your original common set; user can "Select all" from dropdown.
   const [active, setActive] = useState<FieldId[]>([
-    "legalDescription",
-    "instrumentNumber",
-    "grantor",
-    "grantee",
-    "instrumentType",
-    "filingDate",
-    "volume",
-    "criteria",
+    "criteria"
   ]);
 
   // Initialize values for all fields to empty strings
