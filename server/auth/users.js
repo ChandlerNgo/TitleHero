@@ -9,7 +9,7 @@ async function authenticateUser(username, password) {
         
         // First check admin table
         const [adminRows] = await pool.execute(
-            'SELECT adminID as id, username as name, password, "admin" as role FROM Admin WHERE username = ?',
+            'SELECT adminID as id, name, password, "admin" as role FROM Admin WHERE name = ?',
             [username]
         );
         console.log('Admin query results:', adminRows);
@@ -20,7 +20,7 @@ async function authenticateUser(username, password) {
 
         // Then check user table if not found in admin
         const [userRows] = await pool.execute(
-            'SELECT userID as id, username as name, password, role FROM User WHERE username = ?',
+            'SELECT userID as id, name, password, role FROM User WHERE name = ?',
             [username]
         );
         console.log('User query results:', userRows);
@@ -73,7 +73,7 @@ async function createUser(username, password, role = 'user') {
     const pool = await getPool();
     const hashedPassword = await hashPassword(password);
     const [result] = await pool.execute(
-        'INSERT INTO User (username, password, role) VALUES (?, ?, ?)',
+        'INSERT INTO User (name, password, role) VALUES (?, ?, ?)',
         [username, hashedPassword, role]
     );
     return result.insertId;
@@ -87,7 +87,7 @@ async function createAdmin(username, password, permissions = null) {
     const hashedPassword = await hashPassword(password);
     console.log("Hashed password:", hashedPassword);
     const [result] = await pool.execute(
-        'INSERT INTO Admin (username, password, permissions) VALUES (?, ?, ?)',
+        'INSERT INTO Admin (name, password, permissions) VALUES (?, ?, ?)',
         [username, hashedPassword, permissions]
     );
     return result.insertId;

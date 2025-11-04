@@ -5,7 +5,6 @@ const path = require('path');
 const { getPool } = require('./config');
 
 const router = express.Router();
-const cors = require('cors');
 
 const documentsRoutes = require('./routes/documents');
 const loginRoutes = require('./routes/login');

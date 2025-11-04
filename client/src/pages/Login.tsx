@@ -25,12 +25,20 @@ export default function Login({ onEnter }: { onEnter: () => void }) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
     console.log('Login attempt with:', formData);
 
     try {
       console.log('Sending login request with:', formData);
       
-      const response = await axios.post('http://localhost:5000/api/login', formData);
+      // Try port 5000 first, then try environment variable port
+      let response;
+      try {
+        response = await axios.post('http://localhost:5000/api/login', formData);
+      } catch (error) {
+        // If port 5000 fails, try port from environment
+        response = await axios.post('http://localhost:3001/api/login', formData);
+      }
       console.log('Server response:', response.data);
       
       if (response.data.success) {
