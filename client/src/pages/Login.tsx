@@ -78,7 +78,7 @@ export default function Login({ onEnter }: { onEnter: () => void }) {
 
         <form onSubmit={handleSubmit} className="welcome-form">
           <div className="field">
-            <label htmlFor="org">Every deed needs a hero.</label>
+            <label htmlFor="org">Every title needs a hero.</label>
           </div>
         
         {/* login information will be here! Does not do anything right now */}
