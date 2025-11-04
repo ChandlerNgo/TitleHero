@@ -32,6 +32,18 @@ async function getDbConfig(){
     }
 }
 
+async function getOpenAPIKey(){
+    if(isDev){
+        return process.env.OPENAIAPI_KEY;
+    }else{
+        const client = new AWS.SecretsManager({ region: 'us-east-2' });
+        const data = await client.getSecretValue({ SecretId: 'prod/openapi-key' }).promise();
+        const secret = JSON.parse(data.SecretString);
+            
+        return secret.openai_key;
+    }
+}
+
 async function getPool(){
     if(pool){
         return pool;
@@ -44,4 +56,4 @@ async function getPool(){
     return pool;
 }
 
-module.exports = getPool;
+module.exports = {getPool, getOpenAPIKey};

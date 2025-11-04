@@ -65,7 +65,7 @@ export default function Login({ onEnter }: { onEnter: () => void }) {
 
         <form onSubmit={handleSubmit} className="welcome-form">
           <div className="field">
-            <label htmlFor="org">Title Hero, enter cool slogan here.</label>
+            <label htmlFor="org">Every title needs a hero.</label>
           </div>
 
           {error && (
