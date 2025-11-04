@@ -445,5 +445,81 @@ app.get('/documents/search', async (req, res) => {
   }
 });
 
+// UPDATE: PUT /documents/:id
+app.put('/documents/:id', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ error: 'Invalid documentID' });
+    }
+
+    const pool = await getPool();
+
+    // Whitelist updatable columns
+    const updatable = new Set([
+      'abstractID','bookTypeID','subdivisionID','countyID',
+      'instrumentNumber','book','volume','page','grantor','grantee',
+      'instrumentType','remarks','lienAmount','legalDescription','subBlock',
+      'abstractText','acres','fileStampDate','filingDate','nFileReference',
+      'finalizedBy','exportFlag','propertyType','GFNNumber','marketShare',
+      'sortArray','address','CADNumber','CADNumber2','GLOLink','fieldNotes'
+    ]);
+
+    const body = req.body || {};
+    const sets = [];
+    const params = [];
+
+    for (const [k, v] of Object.entries(body)) {
+      if (!updatable.has(k)) continue;
+      // page is reserved word -> backtick it (we backtick all keys anyway)
+      sets.push(`\`${k}\` = ?`);
+      params.push(v === '' ? null : v);
+    }
+
+    if (sets.length === 0) {
+      return res.status(400).json({ error: 'No valid fields to update' });
+    }
+
+    // touch updated_at if present in your schema (optional)
+    // sets.push('`updated_at` = NOW()');
+
+    const sql = `UPDATE Document SET ${sets.join(', ')} WHERE documentID = ?`;
+    params.push(id);
+
+    const [result] = await pool.query(sql, params);
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Document not found' });
+    }
+
+    res.json({ message: 'Document updated', documentID: id });
+  } catch (err) {
+    console.error('Update error:', err);
+    res.status(500).json({ error: 'Failed to update document' });
+  }
+});
+
+// DELETE: DELETE /documents/:id
+app.delete('/documents/:id', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ error: 'Invalid documentID' });
+    }
+
+    const pool = await getPool();
+    const [result] = await pool.query('DELETE FROM Document WHERE documentID = ?', [id]);
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Document not found' });
+    }
+
+    res.json({ message: 'Document deleted', documentID: id });
+  } catch (err) {
+    console.error('Delete error:', err);
+    res.status(500).json({ error: 'Failed to delete document' });
+  }
+});
+
+
 
 module.exports = app;
