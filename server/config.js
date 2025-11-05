@@ -34,7 +34,7 @@ async function getDbConfig(){
 
 async function getOpenAPIKey(){
     if(isDev){
-        return process.env.OPENAIAPI_KEY;
+        return process.env.OPENAPI_KEY;
     }else{
         const client = new AWS.SecretsManager({ region: 'us-east-2' });
         const data = await client.getSecretValue({ SecretId: 'prod/openapi-key' }).promise();
