@@ -18,7 +18,7 @@ app.post('/documents', async (req, res) => {
         const pool = await getPool();
 
         const {
-            abstractID = null,
+            abstractCode = null,
             bookTypeID = null,
             subdivisionID = null,
             countyID = null,
@@ -53,7 +53,7 @@ app.post('/documents', async (req, res) => {
 
         const [result] = await pool.query(
             `INSERT INTO Document (
-                abstractID, bookTypeID, subdivisionID, countyID,
+                abstractCode, bookTypeID, subdivisionID, countyID,
                 instrumentNumber, book, volume, \`page\`, grantor, grantee,
                 instrumentType, remarks, lienAmount, legalDescription, subBlock,
                 abstractText, acres, fileStampDate, filingDate, nFileReference,
@@ -61,7 +61,7 @@ app.post('/documents', async (req, res) => {
                 sortArray, address, CADNumber, CADNumber2, GLOLink, fieldNotes
             ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
             [
-                abstractID, bookTypeID, subdivisionID, countyID,
+                abstractCode, bookTypeID, subdivisionID, countyID,
                 instrumentNumber, book, volume, page, grantor, grantee,
                 instrumentType, remarks, lienAmount, legalDescription, subBlock,
                 abstractText, acres, fileStampDate, filingDate, nFileReference,
@@ -90,7 +90,7 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 
 async function ensureLookupId(pool, tableName, name) {
   if (!name || (typeof name === 'string' && name.trim() === '')) return null;
   // Adjust column names if your schema differs
-  const idCol = `${tableName.toLowerCase()}ID`; // e.g., 'abstractID'
+  const idCol = `${tableName.toLowerCase()}ID`; // e.g., 'abstractCode'
   const [found] = await pool.query(`SELECT ${idCol} AS id FROM ${tableName} WHERE name = ? LIMIT 1`, [name.trim()]);
   if (found.length) return found[0].id;
   const [ins] = await pool.query(`INSERT INTO ${tableName} (name) VALUES (?)`, [name.trim()]);
@@ -297,7 +297,7 @@ app.post('/documents/ocr', upload.array('files', 20), async (req, res) => {
     await pool.query('START TRANSACTION');
 
     // NOTE: adjust table/column names here if your schema differs
-    const abstractID   = await ensureLookupId(pool, 'Abstract',   extracted.lookups?.Abstract?.name || null);
+    const abstractCode   = await ensureLookupId(pool, 'Abstract',   extracted.lookups?.Abstract?.name || null);
     const bookTypeID   = await ensureLookupId(pool, 'BookType',   extracted.lookups?.BookType?.name || null);
     const subdivisionID= await ensureLookupId(pool, 'Subdivision',extracted.lookups?.Subdivision?.name || null);
     const countyID     = await ensureLookupId(pool, 'County',     extracted.lookups?.County?.name || null);
@@ -309,7 +309,7 @@ app.post('/documents/ocr', upload.array('files', 20), async (req, res) => {
     const acres      = toDecimalOrNull(d.acres);
 
     const insertParams = [
-      abstractID,
+      abstractCode,
       bookTypeID,
       subdivisionID,
       countyID,
@@ -344,7 +344,7 @@ app.post('/documents/ocr', upload.array('files', 20), async (req, res) => {
 
     const [result] = await pool.query(
       `INSERT INTO Document (
-        abstractID, bookTypeID, subdivisionID, countyID,
+        abstractCode, bookTypeID, subdivisionID, countyID,
         instrumentNumber, book, volume, \`page\`, grantor, grantee,
         instrumentType, remarks, lienAmount, legalDescription, subBlock,
         abstractText, acres, fileStampDate, filingDate, nFileReference,
@@ -384,7 +384,7 @@ app.get('/documents/search', async (req, res) => {
       'finalizedBy','nFileReference'
     ]);
     const numericEq = new Set([
-      'documentID','abstractID','bookTypeID','subdivisionID','countyID','exportFlag','GFNNumber'
+      'documentID','abstractCode','bookTypeID','subdivisionID','countyID','exportFlag','GFNNumber'
     ]);
     const dateEq = new Set(['fileStampDate','filingDate','created_at','updated_at']);
 
@@ -457,7 +457,7 @@ app.put('/documents/:id', async (req, res) => {
 
     // Whitelist updatable columns
     const updatable = new Set([
-      'abstractID','bookTypeID','subdivisionID','countyID',
+      'abstractCode','bookTypeID','subdivisionID','countyID',
       'instrumentNumber','book','volume','page','grantor','grantee',
       'instrumentType','remarks','lienAmount','legalDescription','subBlock',
       'abstractText','acres','fileStampDate','filingDate','nFileReference',
