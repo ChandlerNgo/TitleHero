@@ -57,6 +57,8 @@ jobs:
               "sudo docker rm frontend || true",
               "echo Running new container...",
               "sudo docker run -d -p 80:80 --name frontend ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY_FRONTEND }}:latest",
+              "echo Removing unused Docker images...",
+              "sudo docker image prune -af",
               "echo Deployment finished."
             ]'
 
@@ -78,5 +80,7 @@ jobs:
               "sudo docker rm backend || true",
               "echo Running new container...",
               "sudo docker run -d -p 5000:5000 --name backend ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY_BACKEND }}:latest",
+              "echo Removing unused Docker images...",
+              "sudo docker image prune -af",
               "echo Deployment finished."
             ]'
