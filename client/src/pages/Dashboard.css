@@ -287,13 +287,18 @@
 
 
 /* ====== Buttons (inert) ====== */
+button,
+.btn,
+.upload-btn,
+.icon-btn {
+  cursor: pointer;
+}
 .btn {
   border-radius: var(--radius-md);
   padding: 12px 18px;
   border: 1px solid #d4cec9;
   background: #fff;
   font-weight: 600;
-  cursor: default;
 }
 .btn-primary {
   background: var(--accent);
