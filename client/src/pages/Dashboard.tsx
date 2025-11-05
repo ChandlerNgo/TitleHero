@@ -211,7 +211,7 @@ function UploadModal({ open, onClose, onUploaded }: UploadModalProps) {
         <div className="modal-actions">
           <button className="btn" onClick={onClose} disabled={busy}>Cancel</button>
           <button className="btn btn-primary" onClick={upload} disabled={!files.length || busy}>
-            {busy ? "Uploading & Extracting…" : "Upload to OCR"}
+            {busy ? "Uploading & Extracting…" : "Upload"}
           </button>
         </div>
       </div>
