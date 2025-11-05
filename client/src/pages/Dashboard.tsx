@@ -95,10 +95,15 @@ function UploadModal({ open, onClose, onUploaded }: UploadModalProps) {
 
   if (!open) return null;
 
-  const onPick = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files) return;
-    setFiles(prev => [...prev, ...Array.from(e.target.files)]);
-  };
+ const onPick = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const list = e.currentTarget.files;   // <= correct source for React events
+  if (!list) return;                    // null-check
+
+  setFiles(prev => [...prev, ...Array.from(list)]);
+
+  // optional: allow re-selecting the same file again
+  e.currentTarget.value = "";
+};
 
   const onDrop = (e: React.DragEvent) => {
     e.preventDefault();
