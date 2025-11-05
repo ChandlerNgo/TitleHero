@@ -412,6 +412,31 @@ button,
   .col-3 { grid-column: span 6; }
 }
 
+/* Row actions (top-right of card) */
+.row-actions {
+  display: flex;
+  gap: 6px;
+  margin-left: 8px;
+}
+
+.btn.tiny.danger {
+  background: #fff0f0;
+  border-color: #f5c2c0;
+  color: #b4382e;
+}
+.btn.tiny.danger:hover {
+  background: #ffe5e3;
+}
+
+.btn.tiny.ghost {
+  background: transparent;
+  border-color: #e2dfdc;
+}
+.btn.tiny.ghost:hover {
+  background: #f6f3f1;
+}
+
+
 /* ---------- Modal ---------- */
 .modal-overlay {
   position: fixed; inset: 0;

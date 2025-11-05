@@ -369,6 +369,75 @@ export default function Dashboard() {
 
   const adminMode = isAdmin();
 
+  //stuff for editing and deleting
+
+  // Editing state
+  const [editId, setEditId] = useState<number | null>(null);
+  const [editValues, setEditValues] = useState<any>({});
+
+  const API_BASE = import.meta.env.DEV ? '/api' : '/api';
+
+  function beginEdit(row: any) {
+    setEditId(row.documentID);
+    setEditValues({
+      instrumentNumber: row.instrumentNumber ?? '',
+      grantor: row.grantor ?? '',
+      grantee: row.grantee ?? '',
+      instrumentType: row.instrumentType ?? '',
+      book: row.book ?? '',
+      volume: row.volume ?? '',
+      page: row.page ?? '',
+      legalDescription: row.legalDescription ?? '',
+      remarks: row.remarks ?? '',
+      address: row.address ?? '',
+      filingDate: row.filingDate ?? '',
+      fileStampDate: row.fileStampDate ?? '',
+      exportFlag: row.exportFlag ?? 0
+    });
+  }
+
+  function cancelEdit() {
+    setEditId(null);
+    setEditValues({});
+  }
+
+  async function saveEdit(id: number) {
+    try {
+      const res = await fetch(`${API_BASE}/documents/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify(editValues)
+      });
+      if (!res.ok) {
+        const t = await res.text();
+        throw new Error(`Update failed (${res.status}): ${t}`);
+      }
+      // refresh current results (cheap: re-run last search)
+      await submit();
+      cancelEdit();
+    } catch (e:any) {
+      alert(e?.message || 'Failed to update');
+    }
+  }
+
+  async function deleteRow(id: number) {
+    if (!confirm(`Delete document ${id}? This cannot be undone.`)) return;
+    try {
+      const res = await fetch(`${API_BASE}/documents/${id}`, {
+        method: 'DELETE',
+        headers: { 'Accept': 'application/json' }
+      });
+      if (!res.ok) {
+        const t = await res.text();
+        throw new Error(`Delete failed (${res.status}): ${t}`);
+      }
+      // remove from UI or refresh
+      setResults(prev => prev.filter(r => r.documentID !== id));
+    } catch (e:any) {
+      alert(e?.message || 'Failed to delete');
+    }
+  }
+
   return (
     <div className="app">
       {/* Sidebar */}
@@ -543,12 +612,136 @@ export default function Dashboard() {
                 </div>
 
                 {/* legal preview */}
-                <div className="legal">
-                  <div className="legal-label"><b>Legal:</b></div>
-                  <div className="legal-content">
-                    {row.legalDescription?.trim() || '—'}
+                
+                {/* editing and deleting stuff */}
+                {editId === row.documentID ? (
+                  <div style={{ marginTop: 10, display: 'grid', gap: 10 }}>
+                    <div className="doc-meta">
+                      <div className="kv">
+                        <b>Instrument #</b>
+                        <input className="input"
+                          value={editValues.instrumentNumber || ''}
+                          onChange={e => setEditValues((v:any) => ({...v, instrumentNumber: e.target.value}))} />
+                      </div>
+
+                      <div className="kv wide">
+                        <b>Parties</b>
+                        <input className="input"
+                          placeholder="Grantor"
+                          value={editValues.grantor || ''}
+                          onChange={e => setEditValues((v:any) => ({...v, grantor: e.target.value}))} />
+                        <input className="input"
+                          placeholder="Grantee"
+                          value={editValues.grantee || ''}
+                          onChange={e => setEditValues((v:any) => ({...v, grantee: e.target.value}))} />
+                      </div>
+
+                      <div className="kv">
+                        <b>Type</b>
+                        <input className="input"
+                          value={editValues.instrumentType || ''}
+                          onChange={e => setEditValues((v:any) => ({...v, instrumentType: e.target.value}))} />
+                      </div>
+
+                      <div className="kv">
+                        <b>Book</b>
+                        <input className="input"
+                          value={editValues.book || ''}
+                          onChange={e => setEditValues((v:any) => ({...v, book: e.target.value}))} />
+                      </div>
+                      <div className="kv">
+                        <b>Volume</b>
+                        <input className="input"
+                          value={editValues.volume || ''}
+                          onChange={e => setEditValues((v:any) => ({...v, volume: e.target.value}))} />
+                      </div>
+                      <div className="kv">
+                        <b>Page</b>
+                        <input className="input"
+                          value={editValues.page || ''}
+                          onChange={e => setEditValues((v:any) => ({...v, page: e.target.value}))} />
+                      </div>
+
+                      <div className="kv">
+                        <b>Filed</b>
+                        <input className="input mono"
+                          placeholder="YYYY-MM-DD"
+                          value={editValues.filingDate || ''}
+                          onChange={e => setEditValues((v:any) => ({...v, filingDate: e.target.value}))} />
+                      </div>
+
+                      <div className="kv">
+                        <b>File Stamp</b>
+                        <input className="input mono"
+                          placeholder="YYYY-MM-DD"
+                          value={editValues.fileStampDate || ''}
+                          onChange={e => setEditValues((v:any) => ({...v, fileStampDate: e.target.value}))} />
+                      </div>
+
+                      <div className="kv">
+                        <b>ExportFlag</b>
+                        <input className="input"
+                          placeholder="0 or 1"
+                          value={editValues.exportFlag ?? 0}
+                          onChange={e => setEditValues((v:any) => ({...v, exportFlag: Number(e.target.value) || 0}))} />
+                      </div>
+                    </div>
+
+                    <div className="legal">
+                      <div className="legal-label"><b>Legal:</b></div>
+                      <textarea
+                        className="textarea legal-content"
+                        style={{ WebkitLineClamp: 'unset', display: 'block', maxHeight: 220, overflow: 'auto' }}
+                        value={editValues.legalDescription || ''}
+                        onChange={e => setEditValues((v:any) => ({...v, legalDescription: e.target.value}))}
+                      />
+                    </div>
+
+                    <div className="kv wide">
+                      <b>Remarks</b>
+                      <input className="input"
+                        value={editValues.remarks || ''}
+                        onChange={e => setEditValues((v:any) => ({...v, remarks: e.target.value}))} />
+                    </div>
+
+                    <div className="kv wide">
+                      <b>Address</b>
+                      <input className="input"
+                        value={editValues.address || ''}
+                        onChange={e => setEditValues((v:any) => ({...v, address: e.target.value}))} />
+                    </div>
+                  </div>
+                ) : (
+                  // Your existing read-only legal preview (unchanged)
+                  <div className="legal">
+                    <div className="legal-label"><b>Legal:</b></div>
+                    <div className="legal-content">{row.legalDescription?.trim() || '—'}</div>
+                  </div>
+                )}
+
+
+                <div className="doc-head">
+
+                <div className="badges">
+                  {row.exportFlag ? <span className="badge">Exported</span> : null}
+
+                  {/* ACTIONS */}
+                  <div className="row-actions">
+                    {editId === row.documentID ? (
+                      <>
+                        <button className="btn tiny" onClick={() => saveEdit(row.documentID)}>Save</button>
+                        <button className="btn tiny ghost" onClick={cancelEdit}>Cancel</button>
+                      </>
+                    ) : (
+                      <>
+                        <button className="btn tiny" onClick={() => beginEdit(row)}>Edit</button>
+                        <button className="btn tiny danger" onClick={() => deleteRow(row.documentID)}>Delete</button>
+                      </>
+                    )}
                   </div>
                 </div>
+              </div>
+
 
               </div>
             ))}
