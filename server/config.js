@@ -1,5 +1,5 @@
 require('dotenv').config();
-// const AWS = require('aws-sdk');
+const AWS = require('aws-sdk');
 const mysql = require('mysql2/promise');
 
 const isDev = process.env.NODE_ENV === 'development';
