@@ -6,7 +6,7 @@ import { isAdmin } from "../utils/auth";
 const FIELD_DEFS = [
   // IDs / references
   { id: "documentID",       label: "documentID",       placeholder: "e.g., 6",                      type: "input",   span: 3 },
-  { id: "abstractID",       label: "abstractID",       placeholder: "e.g., 42",                     type: "input",   span: 3 },
+  { id: "abstractCode",       label: "abstractCode",       placeholder: "e.g., 42",                     type: "input",   span: 3 },
   { id: "bookTypeID",       label: "bookTypeID",       placeholder: "e.g., 1",                      type: "input",   span: 3 },
   { id: "subdivisionID",    label: "subdivisionID",    placeholder: "e.g., 17",                     type: "input",   span: 3 },
   { id: "countyID",         label: "countyID",         placeholder: "e.g., 123",                    type: "input",   span: 3 },
