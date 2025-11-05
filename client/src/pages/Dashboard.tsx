@@ -88,9 +88,7 @@ function UploadModal({ open, onClose, onUploaded }: UploadModalProps) {
 
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [open, onClose]);
@@ -99,7 +97,7 @@ function UploadModal({ open, onClose, onUploaded }: UploadModalProps) {
 
   const onPick = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
-    setFiles(prev => [...prev, ...Array.from(e.target.files!)]);
+    setFiles(prev => [...prev, ...Array.from(e.target.files)]);
   };
 
   const onDrop = (e: React.DragEvent) => {
@@ -110,8 +108,15 @@ function UploadModal({ open, onClose, onUploaded }: UploadModalProps) {
     }
   };
 
-  const removeAt = (i: number) => {
-    setFiles(prev => prev.filter((_, idx) => idx !== i));
+  const removeAt = (i: number) => setFiles(prev => prev.filter((_, idx) => idx !== i));
+
+  const readBodySafely = async (res: Response) => {
+    try {
+      const ct = res.headers.get("content-type") || "";
+      return ct.includes("application/json") ? JSON.stringify(await res.json()) : await res.text();
+    } catch {
+      return "(no response body)";
+    }
   };
 
   const upload = async () => {
@@ -121,32 +126,24 @@ function UploadModal({ open, onClose, onUploaded }: UploadModalProps) {
     setCreatedId(null);
 
     try {
-      const baseUrl =
-        import.meta.env.VITE_API_TARGET ||
-        "https://5mj0m92f17.execute-api.us-east-2.amazonaws.com";
-
       const form = new FormData();
-      // Multer field name your server expects:
-      files.forEach(f => form.append("files", f, f.name));
+      files.forEach(f => form.append("files", f, f.name)); // Multer field name
 
-      // Your express route is '/documents/ocr' and you front it with '/api'
-      const res = await fetch(`${baseUrl}/api/documents/ocr`, {
+      // SAME-ORIGIN call through Vite proxy (matches your Postman URL on 5173)
+      const res = await fetch(`/api/documents/ocr`, {
         method: "POST",
         body: form
-        // No manual Content-Type header for FormData
+        // Don't set Content-Type; the browser will set multipart boundary.
       });
 
       if (!res.ok) {
-        const t = await res.text();
-        throw new Error(`Upload/OCR failed (${res.status}): ${t}`);
+        const body = await readBodySafely(res);
+        throw new Error(`Upload/OCR failed (${res.status}): ${body}`);
       }
 
       const data = await res.json(); // { message, documentID, ai_extraction }
       setCreatedId(data?.documentID ?? null);
       onUploaded?.(data ?? null);
-
-      // Optional: auto-close after a short delay
-      // setTimeout(onClose, 800);
     } catch (e: any) {
       setErr(e?.message || "Upload failed");
       onUploaded?.(null);
