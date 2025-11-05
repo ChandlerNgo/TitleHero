@@ -306,6 +306,48 @@ button,
   font-weight: 800;
 }
 
+
+/* smooth transitions for all buttons */
+button, .btn, .upload-btn, .icon-btn {
+  transition: background-color .15s ease, border-color .15s ease, filter .15s ease;
+}
+
+/* generic darken on hover/press (works for white/neutral buttons) */
+button:not(:disabled):hover,
+.btn:not(.disabled):hover,
+.upload-btn:hover,
+.icon-btn:hover {
+  filter: brightness(.95);
+}
+button:active,
+.btn:active,
+.upload-btn:active,
+.icon-btn:active {
+  filter: brightness(.9);
+}
+
+/* primary button: use explicit darker shades (nicer than filter) */
+:root {
+  --accent-hover: #6ed45a;  /* ~10–15% darker than --accent */
+  --accent-active: #5ec84f;
+}
+.btn-primary:hover    { background: var(--accent-hover);  filter: none; }
+.btn-primary:active   { background: var(--accent-active); filter: none; }
+
+/* disabled should not darken */
+button:disabled,
+.btn.disabled,
+.btn[aria-disabled="true"] {
+  filter: none;
+  opacity: .6;
+  pointer-events: none;
+}
+
+/* optional: respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  button, .btn, .upload-btn, .icon-btn { transition: none; }
+}
+
 /* RESULTS*/
 .results { margin-top: var(--space-4); }
 
