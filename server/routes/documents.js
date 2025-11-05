@@ -87,15 +87,38 @@ const { OpenAI } = require('openai');
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
 
 // Helper: ensure lookup row exists and return its ID (or null if name is null/blank)
-async function ensureLookupId(pool, tableName, name) {
-  if (!name || (typeof name === 'string' && name.trim() === '')) return null;
-  // Adjust column names if your schema differs
-  const idCol = `${tableName.toLowerCase()}ID`; // e.g., 'abstractCode'
-  const [found] = await pool.query(`SELECT ${idCol} AS id FROM ${tableName} WHERE name = ? LIMIT 1`, [name.trim()]);
+async function ensureLookupId(pool, tableName, rawName) {
+  if (!rawName || (typeof rawName === 'string' && rawName.trim() === '')) return null;
+
+  const name = String(rawName).trim();
+  const idCol = tableName === 'Abstract'
+    ? 'abstractCode'                       // use code for Abstract
+    : `${tableName.toLowerCase()}ID`;      // use ID for others
+
+  const [found] = await pool.query(
+    `SELECT \`${idCol}\` AS id FROM \`${tableName}\` WHERE \`name\` = ? LIMIT 1`,
+    [name]
+  );
   if (found.length) return found[0].id;
-  const [ins] = await pool.query(`INSERT INTO ${tableName} (name) VALUES (?)`, [name.trim()]);
+
+  const [ins] = await pool.query(
+    `INSERT INTO \`${tableName}\` (\`name\`) VALUES (?)`,
+    [name]
+  );
+
+  // If PK is auto-increment (e.g., ...ID), insertId is correct.
+  // If Abstract uses a non-AI code, fetch it back by name.
+  if (!ins.insertId || tableName === 'Abstract') {
+    const [refetch] = await pool.query(
+      `SELECT \`${idCol}\` AS id FROM \`${tableName}\` WHERE \`name\` = ? LIMIT 1`,
+      [name]
+    );
+    return refetch[0]?.id ?? null;
+  }
+
   return ins.insertId;
 }
+
 
 // Coerce decimals or return null
 function toDecimalOrNull(v) {
