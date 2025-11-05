@@ -31,14 +31,14 @@ export default function Login({ onEnter }: { onEnter: () => void }) {
     try {
       console.log('Sending login request with:', formData);
       
-      // Try port 5000 first, then try environment variable port
-      let response;
-      try {
-        response = await axios.post('http://localhost:5000/api/login', formData);
-      } catch (error) {
-        // If port 5000 fails, try port from environment
-        response = await axios.post('http://localhost:3001/api/login', formData);
-      }
+      // For local development, use relative path; for production use full URL
+      const apiBase = import.meta.env.DEV ? '/api' : (import.meta.env.VITE_API_TARGET || 'https://5mj0m92f17.execute-api.us-east-2.amazonaws.com/api');
+      const response = await axios.post(`${apiBase}/login`, formData, {
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
+      });
       console.log('Server response:', response.data);
       
       if (response.data.success) {
