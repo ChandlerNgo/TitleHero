@@ -34,10 +34,10 @@ export default function Login({ onEnter }: { onEnter: () => void }) {
       // Try port 5000 first, then try environment variable port
       let response;
       try {
-        response = await axios.post('http://localhost:5000/api/login', formData);
+        response = await axios.post('https://5mj0m92f17.execute-api.us-east-2.amazonaws.com/api/login', formData);
       } catch (error) {
         // If port 5000 fails, try port from environment
-        response = await axios.post('http://localhost:3001/api/login', formData);
+        response = await axios.post('https://5mj0m92f17.execute-api.us-east-2.amazonaws.com/api/login', formData);
       }
       console.log('Server response:', response.data);
       
