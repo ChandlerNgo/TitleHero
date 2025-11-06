@@ -1,100 +1,35 @@
 const express = require('express');
 const { getPool, getOpenAPIKey } = require('../config');
-const app = express();
-
-app.get('/documents', async (req, res) => {
-    try{
-        const pool = await getPool();
-        const [rows] = await pool.query('SELECT * FROM Document;');
-        res.status(200).json(rows);
-    }catch(err){
-        console.error('Error fetching documents:', err);
-        res.status(500).json({ error: 'Failed to fetch documents' });
-    }
-});
-
-app.post('/documents', async (req, res) => {
-    try{
-        const pool = await getPool();
-
-        const {
-            abstractCode = null,
-            bookTypeID = null,
-            subdivisionID = null,
-            countyID = null,
-            instrumentNumber = null,
-            book = null,
-            volume = null,
-            page = null,
-            grantor = null,
-            grantee = null,
-            instrumentType = null,
-            remarks = null,
-            lienAmount = null,
-            legalDescription = null,
-            subBlock = null,
-            abstractText = null,
-            acres = null,
-            fileStampDate = null,
-            filingDate = null,
-            nFileReference = null,
-            finalizedBy = null,
-            exportFlag = null,
-            propertyType = null,
-            GFNNumber = null,
-            marketShare = null,
-            sortArray = null,
-            address = null,
-            CADNumber = null,
-            CADNumber2 = null,
-            GLOLink = null,
-            fieldNotes = null
-        } = req.body;
-
-        const [result] = await pool.query(
-            `INSERT INTO Document (
-                abstractCode, bookTypeID, subdivisionID, countyID,
-                instrumentNumber, book, volume, \`page\`, grantor, grantee,
-                instrumentType, remarks, lienAmount, legalDescription, subBlock,
-                abstractText, acres, fileStampDate, filingDate, nFileReference,
-                finalizedBy, exportFlag, propertyType, GFNNumber, marketShare,
-                sortArray, address, CADNumber, CADNumber2, GLOLink, fieldNotes
-            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-            [
-                abstractCode, bookTypeID, subdivisionID, countyID,
-                instrumentNumber, book, volume, page, grantor, grantee,
-                instrumentType, remarks, lienAmount, legalDescription, subBlock,
-                abstractText, acres, fileStampDate, filingDate, nFileReference,
-                finalizedBy, exportFlag, propertyType, GFNNumber, marketShare,
-                sortArray, address, CADNumber, CADNumber2, GLOLink, fieldNotes
-            ]
-        );
-
-        res.status(201).json({
-            message: 'Document created successfully',
-            documentID: result.insertId
-        });
-    }catch(err){
-        console.error('Error inserting document:', err);
-        res.status(500).json({ error: 'Failed to create document' });
-    }
-});
-
 const multer = require('multer');
 const sharp = require('sharp');
 const { OpenAI } = require('openai');
 
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
+const app = express();
 
-// Helper: ensure lookup row exists and return its ID (or null if name is null/blank)
+/* -------------------------- small helpers -------------------------- */
+function nn(v) {
+  // normalize: '' -> null, trim strings
+  if (v === undefined || v === null) return null;
+  if (typeof v === 'string') {
+    const t = v.trim();
+    return t.length ? t : null;
+  }
+  return v;
+}
+
+function toDecimalOrNull(v) {
+  if (v === null || v === undefined) return null;
+  if (typeof v === 'number') return Number.isFinite(v) ? v : null;
+  const n = parseFloat(String(v).replace(/[,$]/g, ''));
+  return Number.isFinite(n) ? n : null;
+}
+
+/** ID tables only (auto-increment PKs) */
 async function ensureLookupId(pool, tableName, rawName) {
-  if (!rawName || (typeof rawName === 'string' && rawName.trim() === '')) return null;
+  const name = nn(rawName);
+  if (!name) return null;
 
-  const name = String(rawName).trim();
-  const idCol = tableName === 'Abstract'
-    ? 'abstractCode'                       // use code for Abstract
-    : `${tableName.toLowerCase()}ID`;      // use ID for others
-
+  const idCol = `${tableName}ID`; // e.g., BookTypeID, SubdivisionID, CountyID
   const [found] = await pool.query(
     `SELECT \`${idCol}\` AS id FROM \`${tableName}\` WHERE \`name\` = ? LIMIT 1`,
     [name]
@@ -105,38 +40,149 @@ async function ensureLookupId(pool, tableName, rawName) {
     `INSERT INTO \`${tableName}\` (\`name\`) VALUES (?)`,
     [name]
   );
-
-  // If PK is auto-increment (e.g., ...ID), insertId is correct.
-  // If Abstract uses a non-AI code, fetch it back by name.
-  if (!ins.insertId || tableName === 'Abstract') {
-    const [refetch] = await pool.query(
-      `SELECT \`${idCol}\` AS id FROM \`${tableName}\` WHERE \`name\` = ? LIMIT 1`,
-      [name]
-    );
-    return refetch[0]?.id ?? null;
-  }
-
   return ins.insertId;
 }
 
+/** Abstract uses VARCHAR PK: abstractCode. Do NOT create if code is blank. */
+async function ensureAbstract(pool, rawCode, rawName) {
+  const code = nn(rawCode);
+  const name = nn(rawName);
+  if (!code) return null; // do not create empty PKs
 
-// Coerce decimals or return null
-function toDecimalOrNull(v) {
-  if (v === null || v === undefined) return null;
-  if (typeof v === 'number') return v;
-  const n = parseFloat(String(v).replace(/[,$]/g, ''));
-  return Number.isFinite(n) ? n : null;
+  const [found] = await pool.query(
+    'SELECT abstractCode AS id FROM Abstract WHERE abstractCode = ? LIMIT 1',
+    [code]
+  );
+  if (found.length) return found[0].id;
+
+  await pool.query(
+    'INSERT INTO Abstract (abstractCode, name) VALUES (?, ?)',
+    [code, name]
+  );
+  return code;
 }
 
-// Accepts TIFFs in form field `files`
+/* ------------------------------ routes ----------------------------- */
+
+// GET: all documents
+app.get('/documents', async (req, res) => {
+  try {
+    const pool = await getPool();
+    const [rows] = await pool.query('SELECT * FROM Document;');
+    res.status(200).json(rows);
+  } catch (err) {
+    console.error('Error fetching documents:', err);
+    res.status(500).json({ error: 'Failed to fetch documents' });
+  }
+});
+
+// POST: create document manually
+app.post('/documents', async (req, res) => {
+  try {
+    const pool = await getPool();
+
+    const {
+      abstractCode = null,
+      bookTypeID = null,
+      subdivisionID = null,
+      countyID = null,
+      instrumentNumber = null,
+      book = null,
+      volume = null,
+      page = null,
+      grantor = null,
+      grantee = null,
+      instrumentType = null,
+      remarks = null,
+      lienAmount = null,
+      legalDescription = null,
+      subBlock = null,
+      abstractText = null,
+      acres = null,
+      fileStampDate = null,
+      filingDate = null,
+      nFileReference = null,
+      finalizedBy = null,
+      exportFlag = null,
+      propertyType = null,
+      GFNNumber = null,
+      marketShare = null,
+      sortArray = null,
+      address = null,
+      CADNumber = null,
+      CADNumber2 = null,
+      GLOLink = null,
+      fieldNotes = null
+    } = req.body || {};
+
+    const params = [
+      nn(abstractCode),
+      nn(bookTypeID),
+      nn(subdivisionID),
+      nn(countyID),
+      nn(instrumentNumber),
+      nn(book),
+      nn(volume),
+      nn(page),
+      nn(grantor),
+      nn(grantee),
+      nn(instrumentType),
+      nn(remarks),
+      toDecimalOrNull(lienAmount),
+      nn(legalDescription),
+      nn(subBlock),
+      nn(abstractText),
+      toDecimalOrNull(acres),
+      nn(fileStampDate),
+      nn(filingDate),
+      nn(nFileReference),
+      nn(finalizedBy),
+      Number.isInteger(exportFlag) ? exportFlag : (exportFlag ? 1 : 0),
+      nn(propertyType),
+      nn(GFNNumber),
+      nn(marketShare),
+      nn(sortArray),
+      nn(address),
+      nn(CADNumber),
+      nn(CADNumber2),
+      nn(GLOLink),
+      nn(fieldNotes)
+    ];
+
+    const [result] = await pool.query(
+      `INSERT INTO Document (
+        abstractCode, bookTypeID, subdivisionID, countyID,
+        instrumentNumber, book, volume, \`page\`, grantor, grantee,
+        instrumentType, remarks, lienAmount, legalDescription, subBlock,
+        abstractText, acres, fileStampDate, filingDate, nFileReference,
+        finalizedBy, exportFlag, propertyType, GFNNumber, marketShare,
+        sortArray, address, CADNumber, CADNumber2, GLOLink, fieldNotes
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      params
+    );
+
+    res.status(201).json({
+      message: 'Document created successfully',
+      documentID: result.insertId
+    });
+  } catch (err) {
+    console.error('Error inserting document:', err);
+    res.status(500).json({ error: 'Failed to create document' });
+  }
+});
+
+/* ---------------------------- OCR pipeline ---------------------------- */
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
+
 app.post('/documents/ocr', upload.array('files', 20), async (req, res) => {
   const openai = new OpenAI({ apiKey: await getOpenAPIKey() });
+
   try {
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({ error: 'No files uploaded. Send TIFFs in `files`.' });
     }
 
-    // 1) Convert all TIFF pages to PNG data URLs for the Vision API
+    // Convert TIFF/PDF pages → PNG data URLs
     const imageParts = [];
     const pageErrors = [];
 
@@ -148,20 +194,18 @@ app.post('/documents/ocr', upload.array('files', 20), async (req, res) => {
         for (let i = 0; i < pages; i++) {
           try {
             const png = await sharp(f.buffer, {
-                page: i,
-                limitInputPixels: false,   // allow very large pages
-                failOnError: false         // don’t throw on minor decode issues
-              })
-              // optional: if your TIFFs are 1-bit FAX/CCITT, this helps normalize
-              .ensureAlpha()               // normalize channels
-              .png({ compressionLevel: 9 })// lossless, smaller
+              page: i,
+              limitInputPixels: false,
+              failOnError: false
+            })
+              .ensureAlpha()
+              .png({ compressionLevel: 9 })
               .toBuffer();
 
             const b64 = png.toString('base64');
             imageParts.push({ type: 'input_image', image_url: `data:image/png;base64,${b64}` });
           } catch (err) {
             pageErrors.push({ file: f.originalname, page: i, reason: String(err?.message || err) });
-            // continue to next page/file
           }
         }
       } catch (err) {
@@ -169,29 +213,15 @@ app.post('/documents/ocr', upload.array('files', 20), async (req, res) => {
       }
     }
 
-    /* if (imageParts.length === 0) {
-      return res.status(422).json({
-        error: 'Failed to decode any TIFF pages',
-        details: pageErrors.slice(0, 10) // include a sample for debugging
-      });
-    } */
-    // 2) Instruction + JSON Schema for Structured Outputs
+    // Instruction + schema (kept close to your current version).
     const instruction = {
       type: 'input_text',
       text:
         'You are an expert data extraction AI specializing in Texas land title records. ' +
-        'Read ALL images (they form one recorded document), perform OCR, interpret clerk stamps, handwriting, and typewritten content, ' +
-        'and return ONE JSON object with exactly this structure (no extra keys): ' +
-        '{ "lookups": { "Abstract": {"name": "..."}, "BookType": {"name": "..."}, "Subdivision": {"name": "..."}, "County": {"name": "..."} }, ' +
-        '"document": { "instrumentNumber": "...", "book": "...", "volume": "...", "page": "...", "grantor": "...", "grantee": "...", ' +
-        '"instrumentType": "...", "remarks": "...", "lienAmount": "...", "legalDescription": "...", "subBlock": "...", "abstractText": "...", ' +
-        '"acres": "...", "fileStampDate": "YYYY-MM-DD", "filingDate": "YYYY-MM-DD", "nFileReference": "...", "finalizedBy": "...", "exportFlag": 0, ' +
-        '"propertyType": "...", "GFNNumber": "...", "marketShare": "...", "sortArray": "...", "address": "...", "CADNumber": "...", "CADNumber2": "...", ' +
-        '"GLOLink": "...", "fieldNotes": "..." }, ' +
-        '"ai_extraction": { "accuracy": 0.0, "fieldsExtracted": { "supporting_keys": "..." }, "extraction_notes": [] } } ' +
-        'Rules: normalize dates to YYYY-MM-DD; represent money/acreage as decimals; separate multiple parties with a semicolon; ' +
-        'use null (not empty strings) if unknown; merge multi-line legal descriptions; ensure instrumentType reflects legal purpose (e.g., Warranty Deed, Lien, Release); ' +
-        'fileStampDate must come from the physical clerk stamp; filingDate from the “Filed/Recorded” label; verify header stamps vs body text; output ONLY the JSON. Do not make up data. Only use data that is extracted from the uploaded files.'
+        'Read ALL images (they form one recorded document), perform OCR, and return ONLY JSON with this shape: ' +
+        '{ "lookups": { "Abstract": {"name": "...", "code": null }, "BookType": {"name": "..."}, "Subdivision": {"name": "..."}, "County": {"name": "..."} }, ' +
+        '"document": { /* fields as specified */ }, "ai_extraction": { "accuracy": 0.0, "fieldsExtracted": { "supporting_keys": "..." }, "extraction_notes": [] } } ' +
+        'Rules: normalize dates to YYYY-MM-DD; decimals for money/acreage; nulls for unknown; do not invent data.'
     };
 
     const response_format = {
@@ -210,8 +240,12 @@ app.post('/documents/ocr', upload.array('files', 20), async (req, res) => {
           Abstract: {
             type: 'object',
             additionalProperties: false,
-            required: ['name'],
-            properties: { name: { type: ['string', 'null'] } }
+            // ⬇⬇⬇ FIX: include ALL property keys here
+            required: ['name', 'code'],
+            properties: {
+              name: { type: ['string', 'null'] },
+              code: { type: ['string', 'null'] } // can be null if unknown
+            }
           },
           BookType: {
             type: 'object',
@@ -233,136 +267,127 @@ app.post('/documents/ocr', upload.array('files', 20), async (req, res) => {
           }
         }
       },
-
-      document: {
-        type: 'object',
-        additionalProperties: false,
-         required: [
-          'instrumentNumber','book','volume','page','grantor','grantee','instrumentType',
-          'remarks','lienAmount','legalDescription','subBlock','abstractText','acres',
-          'fileStampDate','filingDate','nFileReference','finalizedBy','exportFlag',
-          'propertyType','GFNNumber','marketShare','sortArray','address','CADNumber',
-          'CADNumber2','GLOLink','fieldNotes'
-        ],
-        properties: {
-          instrumentNumber: { type: ['string', 'null'] },
-          book:             { type: ['string', 'null'] },
-          volume:           { type: ['string', 'null'] },
-          page:             { type: ['string', 'null'] },
-          grantor:          { type: ['string', 'null'] },
-          grantee:          { type: ['string', 'null'] },
-          instrumentType:   { type: ['string', 'null'] },
-          remarks:          { type: ['string', 'null'] },
-          lienAmount:       { type: ['number', 'null'] },
-          legalDescription: { type: ['string', 'null'] },
-          subBlock:         { type: ['string', 'null'] },
-          abstractText:     { type: ['string', 'null'] },
-          acres:            { type: ['number', 'null'] },
-          fileStampDate:    { type: ['string', 'null'] },
-          filingDate:       { type: ['string', 'null'] },
-          nFileReference:   { type: ['string', 'null'] },
-          finalizedBy:      { type: ['string', 'null'] },
-          exportFlag:       { type: 'integer' },
-          propertyType:     { type: ['string', 'null'] },
-          GFNNumber:        { type: ['string', 'null'] },
-          marketShare:      { type: ['string', 'null'] },
-          sortArray:        { type: ['string', 'null'] },
-          address:          { type: ['string', 'null'] },
-          CADNumber:        { type: ['string', 'null'] },
-          CADNumber2:       { type: ['string', 'null'] },
-          GLOLink:          { type: ['string', 'null'] },
-          fieldNotes:       { type: ['string', 'null'] }
-        }
-      },
-
-      ai_extraction: {
-        type: 'object',
-        additionalProperties: false,
-        required: ['accuracy', 'fieldsExtracted', 'extraction_notes'],
-        properties: {
-          accuracy: { type: 'number' },
-          fieldsExtracted: {
+          document: {
             type: 'object',
             additionalProperties: false,
-            required: ['supporting_keys'],
+            required: [
+              'instrumentNumber','book','volume','page','grantor','grantee','instrumentType',
+              'remarks','lienAmount','legalDescription','subBlock','abstractText','acres',
+              'fileStampDate','filingDate','nFileReference','finalizedBy','exportFlag',
+              'propertyType','GFNNumber','marketShare','sortArray','address','CADNumber',
+              'CADNumber2','GLOLink','fieldNotes'
+            ],
             properties: {
-              supporting_keys: { type: ['string', 'null'] }
+              instrumentNumber: { type: ['string', 'null'] },
+              book:             { type: ['string', 'null'] },
+              volume:           { type: ['string', 'null'] },
+              page:             { type: ['string', 'null'] },
+              grantor:          { type: ['string', 'null'] },
+              grantee:          { type: ['string', 'null'] },
+              instrumentType:   { type: ['string', 'null'] },
+              remarks:          { type: ['string', 'null'] },
+              lienAmount:       { type: ['number', 'null'] },
+              legalDescription: { type: ['string', 'null'] },
+              subBlock:         { type: ['string', 'null'] },
+              abstractText:     { type: ['string', 'null'] },
+              acres:            { type: ['number', 'null'] },
+              fileStampDate:    { type: ['string', 'null'] },
+              filingDate:       { type: ['string', 'null'] },
+              nFileReference:   { type: ['string', 'null'] },
+              finalizedBy:      { type: ['string', 'null'] },
+              exportFlag:       { type: 'integer' },
+              propertyType:     { type: ['string', 'null'] },
+              GFNNumber:        { type: ['string', 'null'] },
+              marketShare:      { type: ['string', 'null'] },
+              sortArray:        { type: ['string', 'null'] },
+              address:          { type: ['string', 'null'] },
+              CADNumber:        { type: ['string', 'null'] },
+              CADNumber2:       { type: ['string', 'null'] },
+              GLOLink:          { type: ['string', 'null'] },
+              fieldNotes:       { type: ['string', 'null'] }
             }
           },
-          extraction_notes: { type: 'array', items: { type: 'string' } }
+          ai_extraction: {
+            type: 'object',
+            additionalProperties: false,
+            required: ['accuracy', 'fieldsExtracted', 'extraction_notes'],
+            properties: {
+              accuracy: { type: 'number' },
+              fieldsExtracted: {
+                type: 'object',
+                additionalProperties: false,
+                required: ['supporting_keys'],
+                properties: {
+                  supporting_keys: { type: ['string', 'null'] }
+                }
+              },
+              extraction_notes: { type: 'array', items: { type: 'string' } }
+            }
+          }
         }
       }
-    }
-  }
-};
+    };
 
-
-    // 3) Call OpenAI Responses API (Vision + Structured Outputs)
     const resp = await openai.responses.create({
-      model: 'gpt-4.1-mini', // supports images + structured output
+      model: 'gpt-4.1-mini',
       input: [{ role: 'user', content: [instruction, ...imageParts] }],
-      text: { format: response_format } // <= moved here from top-level
+      text: { format: response_format }
     });
 
-    // You can read structured output from either place:
     const jsonText =
-      resp.output_text /* convenience field when text output is present */ ||
+      resp.output_text ||
       resp.output?.[0]?.content?.[0]?.text;
 
     if (!jsonText) {
       return res.status(502).json({ error: 'No JSON returned from model.' });
     }
+
     const extracted = JSON.parse(jsonText);
-
-
-    // 4) Upsert lookup tables and insert into Document
     const pool = await getPool();
     await pool.query('START TRANSACTION');
 
-    // NOTE: adjust table/column names here if your schema differs
-    const abstractCode   = await ensureLookupId(pool, 'Abstract',   extracted.lookups?.Abstract?.name || null);
-    const bookTypeID   = await ensureLookupId(pool, 'BookType',   extracted.lookups?.BookType?.name || null);
-    const subdivisionID= await ensureLookupId(pool, 'Subdivision',extracted.lookups?.Subdivision?.name || null);
-    const countyID     = await ensureLookupId(pool, 'County',     extracted.lookups?.County?.name || null);
+    // Lookups
+    const absName = extracted?.lookups?.Abstract?.name ?? null;
+    const absCodeFromModel = extracted?.lookups?.Abstract?.code ?? null; // may be null
+    const abstractCode = await ensureAbstract(pool, absCodeFromModel, absName); // returns code or null
+
+    const bookTypeID    = await ensureLookupId(pool, 'BookType',    extracted?.lookups?.BookType?.name);
+    const subdivisionID = await ensureLookupId(pool, 'Subdivision', extracted?.lookups?.Subdivision?.name);
+    const countyID      = await ensureLookupId(pool, 'County',      extracted?.lookups?.County?.name);
 
     const d = extracted.document || {};
-
-    // Coerce numerics cleanly
-    const lienAmount = toDecimalOrNull(d.lienAmount);
-    const acres      = toDecimalOrNull(d.acres);
-
     const insertParams = [
-      abstractCode,
-      bookTypeID,
-      subdivisionID,
-      countyID,
-      d.instrumentNumber ?? null,
-      d.book ?? null,
-      d.volume ?? null,
-      d.page ?? null,
-      d.grantor ?? null,
-      d.grantee ?? null,
-      d.instrumentType ?? null,
-      d.remarks ?? null,
-      lienAmount,
-      d.legalDescription ?? null,
-      d.subBlock ?? null,
-      d.abstractText ?? null,
-      acres,
-      d.fileStampDate ?? null,
-      d.filingDate ?? null,
-      d.nFileReference ?? null,
-      d.finalizedBy ?? null,
+      nn(abstractCode),
+      nn(bookTypeID),
+      nn(subdivisionID),
+      nn(countyID),
+      nn(d.instrumentNumber),
+      nn(d.book),
+      nn(d.volume),
+      nn(d.page),
+      nn(d.grantor),
+      nn(d.grantee),
+      nn(d.instrumentType),
+      nn(d.remarks),
+      toDecimalOrNull(d.lienAmount),
+      nn(d.legalDescription),
+      nn(d.subBlock),
+      nn(d.abstractText),
+      toDecimalOrNull(d.acres),
+      nn(d.fileStampDate),
+      nn(d.filingDate),
+      nn(d.nFileReference),
+      nn(d.finalizedBy),
       Number.isInteger(d.exportFlag) ? d.exportFlag : 0,
-      d.propertyType ?? null,
-      d.GFNNumber ?? null,
-      d.marketShare ?? null,
-      d.sortArray ?? null,
-      d.address ?? null,
-      d.CADNumber ?? null,
-      d.CADNumber2 ?? null,
-      d.GLOLink ?? null,
-      d.fieldNotes ?? null
+      nn(d.propertyType),
+      nn(d.GFNNumber),
+      nn(d.marketShare),
+      nn(d.sortArray),
+      nn(d.address),
+      nn(d.CADNumber),
+      nn(d.CADNumber2),
+      nn(d.GLOLink),
+      nn(d.fieldNotes)
     ];
 
     const [result] = await pool.query(
@@ -394,20 +419,20 @@ app.post('/documents/ocr', upload.array('files', 20), async (req, res) => {
   }
 });
 
-//SEARCH: GET /documents/search
+/* ------------------------------- search ------------------------------- */
 app.get('/documents/search', async (req, res) => {
   try {
     const pool = await getPool();
 
-    //fields we accept, broken into sets of either text, numbers, or dates :o
+    // text / numeric / dates
     const textLike = new Set([
       'instrumentNumber','book','volume','page','grantor','grantee','instrumentType',
       'remarks','legalDescription','subBlock','abstractText','propertyType',
       'marketShare','sortArray','address','CADNumber','CADNumber2','GLOLink','fieldNotes',
-      'finalizedBy','nFileReference'
+      'finalizedBy','nFileReference','abstractCode' // abstractCode is VARCHAR
     ]);
     const numericEq = new Set([
-      'documentID','abstractCode','bookTypeID','subdivisionID','countyID','exportFlag','GFNNumber'
+      'documentID','bookTypeID','subdivisionID','countyID','exportFlag','GFNNumber'
     ]);
     const dateEq = new Set(['fileStampDate','filingDate','created_at','updated_at']);
 
@@ -417,17 +442,15 @@ app.get('/documents/search', async (req, res) => {
     const where = [];
     const params = [];
 
-    // applying those field based filters yippee
     for (const [k, vRaw] of Object.entries(req.query)) {
       if (k === 'criteria' || k === 'limit' || k === 'offset') continue;
-      const v = String(vRaw).trim();
+      const v = String(vRaw ?? '').trim();
       if (!v) continue;
 
       if (numericEq.has(k)) {
         where.push(`\`${k}\` = ?`);
         params.push(v);
       } else if (dateEq.has(k)) {
-        // allow exact date or a simple range "YYYY-MM-DD..YYYY-MM-DD"
         const range = v.split('..');
         if (range.length === 2) {
           where.push(`\`${k}\` BETWEEN ? AND ?`);
@@ -437,12 +460,17 @@ app.get('/documents/search', async (req, res) => {
           params.push(v);
         }
       } else if (textLike.has(k)) {
-        where.push(`\`${k}\` LIKE ?`);
-        params.push(`%${v}%`);
+        // exact match for abstractCode if you prefer:
+        if (k === 'abstractCode') {
+          where.push('`abstractCode` = ?');
+          params.push(v);
+        } else {
+          where.push(`\`${k}\` LIKE ?`);
+          params.push(`%${v}%`);
+        }
       }
     }
 
-    // general free text
     const criteria = String(req.query.criteria ?? '').trim();
     if (criteria) {
       const critCols = [
@@ -453,7 +481,7 @@ app.get('/documents/search', async (req, res) => {
       where.push(`(${orParts})`);
       for (let i = 0; i < critCols.length; i++) params.push(`%${criteria}%`);
     }
-    //searching 
+
     let sql = 'SELECT * FROM Document';
     if (where.length) sql += ' WHERE ' + where.join(' AND ');
     sql += ' ORDER BY (updated_at IS NULL), updated_at DESC, (created_at IS NULL), created_at DESC';
@@ -462,13 +490,13 @@ app.get('/documents/search', async (req, res) => {
 
     const [rows] = await pool.query(sql, params);
     res.status(200).json({ rows, limit, offset, count: rows.length });
-  } catch (err) { // error catching :)
+  } catch (err) {
     console.error('Error searching documents:', err);
     res.status(500).json({ error: 'Failed to search documents' });
   }
 });
 
-// UPDATE: PUT /documents/:id
+/* -------------------------- update / delete --------------------------- */
 app.put('/documents/:id', async (req, res) => {
   try {
     const id = Number(req.params.id);
@@ -478,7 +506,6 @@ app.put('/documents/:id', async (req, res) => {
 
     const pool = await getPool();
 
-    // Whitelist updatable columns
     const updatable = new Set([
       'abstractCode','bookTypeID','subdivisionID','countyID',
       'instrumentNumber','book','volume','page','grantor','grantee',
@@ -494,17 +521,19 @@ app.put('/documents/:id', async (req, res) => {
 
     for (const [k, v] of Object.entries(body)) {
       if (!updatable.has(k)) continue;
-      // page is reserved word -> backtick it (we backtick all keys anyway)
       sets.push(`\`${k}\` = ?`);
-      params.push(v === '' ? null : v);
+      if (k === 'lienAmount' || k === 'acres') {
+        params.push(toDecimalOrNull(v));
+      } else if (k === 'exportFlag') {
+        params.push(Number.isInteger(v) ? v : (v ? 1 : 0));
+      } else {
+        params.push(nn(v));
+      }
     }
 
     if (sets.length === 0) {
       return res.status(400).json({ error: 'No valid fields to update' });
     }
-
-    // touch updated_at if present in your schema (optional)
-    // sets.push('`updated_at` = NOW()');
 
     const sql = `UPDATE Document SET ${sets.join(', ')} WHERE documentID = ?`;
     params.push(id);
@@ -521,7 +550,6 @@ app.put('/documents/:id', async (req, res) => {
   }
 });
 
-// DELETE: DELETE /documents/:id
 app.delete('/documents/:id', async (req, res) => {
   try {
     const id = Number(req.params.id);
@@ -542,7 +570,5 @@ app.delete('/documents/:id', async (req, res) => {
     res.status(500).json({ error: 'Failed to delete document' });
   }
 });
-
-
 
 module.exports = app;
