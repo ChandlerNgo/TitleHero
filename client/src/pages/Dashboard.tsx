@@ -2,6 +2,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import "./Dashboard.css";
 import { isAdmin } from "../utils/auth";
 
+// Unified API base: dev uses Vite proxy; prod can point to gateway via VITE_API_TARGET
+const API_BASE = import.meta.env.DEV ? '/api' : (import.meta.env.VITE_API_TARGET || '/api');
+
 /** All searchable fields from DB (ids match DB keys exactly) */
 const FIELD_DEFS = [
   // IDs / references
@@ -134,8 +137,8 @@ function UploadModal({ open, onClose, onUploaded }: UploadModalProps) {
       const form = new FormData();
       files.forEach(f => form.append("files", f, f.name)); // Multer field name
 
-      // SAME-ORIGIN call through Vite proxy (matches your Postman URL on 5173)
-      const res = await fetch(`/api/documents/ocr`, {
+      // Use unified API base (dev proxy or prod target)
+      const res = await fetch(`${API_BASE}/documents/ocr`, {
         method: "POST",
         body: form
         // Don't set Content-Type; the browser will set multipart boundary.
@@ -348,8 +351,7 @@ export default function Dashboard() {
     }
 
     try {
-      const baseUrl = import.meta.env.VITE_API_TARGET || 'https://5mj0m92f17.execute-api.us-east-2.amazonaws.com';
-      const res = await fetch(`${baseUrl}/api/documents/search?${params.toString()}`, {
+      const res = await fetch(`${API_BASE}/documents/search?${params.toString()}`, {
         method: 'GET',
         headers: { 'Accept': 'application/json' }
       });
@@ -375,7 +377,7 @@ export default function Dashboard() {
   const [editId, setEditId] = useState<number | null>(null);
   const [editValues, setEditValues] = useState<any>({});
 
-  const API_BASE = import.meta.env.DEV ? '/api' : '/api';
+  // API_BASE is defined at top for both dev and prod
 
   function beginEdit(row: any) {
     setEditId(row.documentID);
