@@ -7,37 +7,21 @@ async function authenticateUser(username, password) {
         console.log('Attempting to authenticate user:', username);
         console.log('Password provided:', password);
         
-        // First check admin table
-        const [adminRows] = await pool.execute(
-            'SELECT adminID as id, name, password, "admin" as role FROM Admin WHERE name = ?',
+        const [userRows] = await pool.execute(
+            'SELECT userID AS id, name, password, role FROM User WHERE name = ?',
             [username]
         );
-        console.log('Admin query results:', adminRows);
-        
-        if (adminRows.length > 0) {
-            console.log('Found admin user, stored password hash:', adminRows[0].password);
+
+        if (userRows.length > 0) {
+            console.log('Found admin user, stored password hash:', userRows[0].password);
         }
 
-        // Then check user table if not found in admin
-        const [userRows] = await pool.execute(
-            'SELECT userID as id, name, password, role FROM User WHERE name = ?',
-            [username]
-        );
-        console.log('User query results:', userRows);
-
-        const user = adminRows[0] || userRows[0];
+        const user = userRows[0];
         
         if (!user) {
             console.log('No user found with this username');
             return null;
         }
-
-        console.log('Found user:', { 
-            id: user.id, 
-            name: user.name,
-            role: user.role,
-            hasPassword: !!user.password 
-        });
 
         try {
             // Use bcrypt to compare the password
@@ -68,27 +52,12 @@ async function hashPassword(password) {
     return await bcrypt.hash(password, saltRounds);
 }
 
-// Example function to create a new user with a hashed password
-async function createUser(username, password, role = 'user') {
+async function createUser(username, password, role = 'user', permissions = null) {
     const pool = await getPool();
     const hashedPassword = await hashPassword(password);
     const [result] = await pool.execute(
-        'INSERT INTO User (name, password, role) VALUES (?, ?, ?)',
-        [username, hashedPassword, role]
-    );
-    return result.insertId;
-}
-
-// Example function to create a new admin with a hashed password
-async function createAdmin(username, password, permissions = null) {
-    console.log("Creating admin:", username);
-    console.log("Password to hash:", password);
-    const pool = await getPool();
-    const hashedPassword = await hashPassword(password);
-    console.log("Hashed password:", hashedPassword);
-    const [result] = await pool.execute(
-        'INSERT INTO Admin (name, password, permissions) VALUES (?, ?, ?)',
-        [username, hashedPassword, permissions]
+        'INSERT INTO User (name, password, role, permissions) VALUES (?, ?, ?, ?)',
+        [username, hashedPassword, role, permissions]
     );
     return result.insertId;
 }
@@ -96,6 +65,5 @@ async function createAdmin(username, password, permissions = null) {
 module.exports = {
     authenticateUser,
     hashPassword,
-    createUser,
-    createAdmin
+    createUser
 };

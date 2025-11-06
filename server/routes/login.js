@@ -24,11 +24,6 @@ app.post('/login', async (req, res) => {
                 token: 'dummy-token', // TODO: Implement proper JWT token
                 username: user.name,
                 role: user.role,
-                user: {
-                    id: user.id,
-                    name: user.name,
-                    role: user.role
-                }
             });
         } else {
             res.status(401).json({ error: 'Invalid credentials' });
@@ -50,10 +45,10 @@ app.post('/signup', async (req, res) => {
     try {
         let userId;
         if (isAdmin) {
-            userId = await createAdmin(username, password);
+            userId = await createUser(username, password, 'admin');
             console.log('Admin created with ID:', userId);
         } else {
-            userId = await createUser(username, password);
+            userId = await createUser(username, password, 'user');
             console.log('User created with ID:', userId);
         }
         
@@ -68,11 +63,7 @@ app.post('/signup', async (req, res) => {
                     token: 'dummy-token', // TODO: Implement proper JWT token
                     username: user.name,
                     role: user.role,
-                    user: {
-                        id: user.id,
-                        name: user.name,
-                        role: user.role
-                    }
+                    id: user.id,
                 });
             } else {
                 res.status(401).json({ error: 'Account created but authentication failed' });
