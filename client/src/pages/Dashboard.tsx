@@ -3,7 +3,7 @@ import "./Dashboard.css";
 import { isAdmin } from "../utils/auth";
 
 // Unified API base: dev uses Vite proxy; prod can point to gateway via VITE_API_TARGET
-const API_BASE = import.meta.env.DEV ? '/api' : (import.meta.env.VITE_API_TARGET || '/api');
+const API_BASE = import.meta.env.DEV ? '/api' : 'https://5mj0m92f17.execute-api.us-east-2.amazonaws.com/api';
 
 /** All searchable fields from DB (ids match DB keys exactly) */
 const FIELD_DEFS = [
