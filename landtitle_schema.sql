@@ -13,7 +13,8 @@ USE landtitle;
 -- ---------- Lookups / reference tables ----------
 DROP TABLE IF EXISTS Abstract;
 CREATE TABLE Abstract (
-  abstractCode VARCHAR(50) PRIMARY KEY,
+  abstractID INT PRIMARY KEY AUTO_INCREMENT
+  abstractCode VARCHAR(50) NOT NULL,
   name VARCHAR(255) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -36,72 +37,22 @@ CREATE TABLE County (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ---------- Core security / auth ----------
-DROP TABLE IF EXISTS Admin;
-CREATE TABLE Admin (
-  adminID INT PRIMARY KEY AUTO_INCREMENT,
-  username VARCHAR(255) NOT NULL UNIQUE,
-  password VARCHAR(255) NOT NULL,
-  permissions TEXT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
 DROP TABLE IF EXISTS `User`;
 CREATE TABLE `User` (
   userID INT PRIMARY KEY AUTO_INCREMENT,
-  username VARCHAR(255) NOT NULL UNIQUE,
+  name VARCHAR(255) NOT NULL UNIQUE,
   password VARCHAR(255) NOT NULL,
-  role VARCHAR(255) NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-DROP TABLE IF EXISTS Role;
-CREATE TABLE Role (
-  roleID INT PRIMARY KEY AUTO_INCREMENT,
-  name VARCHAR(255) NOT NULL,
+  role VARCHAR(255) NULL,
   permissions TEXT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-DROP TABLE IF EXISTS Permission;
-CREATE TABLE Permission (
-  permissionID INT PRIMARY KEY AUTO_INCREMENT,
-  name VARCHAR(255) NOT NULL,
-  description TEXT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-DROP TABLE IF EXISTS AdminAssignedRole;
-CREATE TABLE AdminAssignedRole (
-  adminID INT NOT NULL,
-  userID INT NOT NULL,
-  roleID INT NOT NULL,
-  assigned_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (adminID, userID, roleID),
-  CONSTRAINT fk_ar_admin FOREIGN KEY (adminID) REFERENCES Admin(adminID) ON DELETE CASCADE,
-  CONSTRAINT fk_ar_user FOREIGN KEY (userID) REFERENCES `User`(userID) ON DELETE CASCADE,
-  CONSTRAINT fk_ar_role FOREIGN KEY (roleID) REFERENCES Role(roleID) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-DROP TABLE IF EXISTS UserRole;
-CREATE TABLE UserRole (
-  userID INT NOT NULL,
-  roleID INT NOT NULL,
-  PRIMARY KEY (userID, roleID),
-  CONSTRAINT fk_ur_user FOREIGN KEY (userID) REFERENCES `User`(userID) ON DELETE CASCADE,
-  CONSTRAINT fk_ur_role FOREIGN KEY (roleID) REFERENCES Role(roleID) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-DROP TABLE IF EXISTS RolePermission;
-CREATE TABLE RolePermission (
-  roleID INT NOT NULL,
-  permissionID INT NOT NULL,
-  PRIMARY KEY (roleID, permissionID),
-  CONSTRAINT fk_rp_role FOREIGN KEY (roleID) REFERENCES Role(roleID) ON DELETE CASCADE,
-  CONSTRAINT fk_rp_permission FOREIGN KEY (permissionID) REFERENCES Permission(permissionID) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
 -- ---------- Document ----------
-DROP TABLE IF EXISTS Document;
 CREATE TABLE Document (
   documentID INT PRIMARY KEY AUTO_INCREMENT,
 
+  abstractID INT NULL,
   abstractCode VARCHAR(50) NULL,
+
   bookTypeID INT NULL,
   subdivisionID INT NULL,
   countyID INT NULL,
@@ -131,20 +82,25 @@ CREATE TABLE Document (
   CADNumber2 VARCHAR(100),
   GLOLink VARCHAR(255),
   fieldNotes TEXT,
-  PRSERV VARCHAR(8),
+  PRSERV VARCHAR(10),
   clerkNumber VARCHAR(14),
+
+  -- left for future data
+  metadata JSON NULL,
 
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
   INDEX idx_doc_instr (instrumentNumber),
   INDEX idx_doc_dates (filingDate, fileStampDate),
-  INDEX idx_doc_fk_abs (abstractCode),
+  INDEX idx_doc_fk_abs_code (abstractCode),
+  INDEX idx_doc_fk_abs_id (abstractID),
   INDEX idx_doc_fk_booktype (bookTypeID),
   INDEX idx_doc_fk_subdiv (subdivisionID),
   INDEX idx_doc_fk_county (countyID),
 
-  CONSTRAINT fk_doc_abstract FOREIGN KEY (abstractCode) REFERENCES Abstract(abstractCode) ON DELETE SET NULL,
+  CONSTRAINT fk_doc_abstractCode FOREIGN KEY (abstractCode) REFERENCES Abstract(abstractCode) ON DELETE SET NULL,
+  CONSTRAINT fk_doc_abstractID FOREIGN KEY (abstractID) REFERENCES Abstract(abstractID) ON DELETE SET NULL,
   CONSTRAINT fk_doc_booktype FOREIGN KEY (bookTypeID) REFERENCES BookType(bookTypeID) ON DELETE SET NULL,
   CONSTRAINT fk_doc_subdivision FOREIGN KEY (subdivisionID) REFERENCES Subdivision(subdivisionID) ON DELETE SET NULL,
   CONSTRAINT fk_doc_county FOREIGN KEY (countyID) REFERENCES County(countyID) ON DELETE SET NULL
