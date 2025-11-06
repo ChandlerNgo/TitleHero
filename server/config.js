@@ -37,7 +37,7 @@ async function getOpenAPIKey(){
         return process.env.OPENAPI_KEY;
     }else{
         const client = new AWS.SecretsManager({ region: 'us-east-2' });
-        const data = await client.getSecretValue({ SecretId: 'prod/openapi-key' }).promise();
+        const data = await client.getSecretValue({ SecretId: 'prod/db-creds' }).promise();
         const secret = JSON.parse(data.SecretString);
             
         return secret.openai_key;
