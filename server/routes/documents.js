@@ -1,19 +1,6 @@
 const express = require('express');
 const { getPool, getOpenAPIKey, getS3BucketName } = require('../config');
 const { S3Client, ListObjectsV2Command, GetObjectCommand } = require('@aws-sdk/client-s3');
-
-// S3 client (v3)
-// Resolve the bucket ONCE; prefer config function, then env
-const rawBucket =
-  (typeof getS3BucketName === 'function' ? getS3BucketName() : undefined) ??
-  process.env.S3_BUCKET ??
-  '';
-const BUCKET = String(rawBucket).trim();
-if (!BUCKET) {
-  console.error('FATAL: S3 bucket not configured. Set via getS3BucketName() or S3_BUCKET env.');
-  // throw new Error('S3 bucket not configured'); // uncomment to hard-fail on boot
-}
-
 const { PDFDocument } = require('pdf-lib');
 const multer = require('multer');
 const sharp = require('sharp');
@@ -24,6 +11,7 @@ const app = express();
 
 /* -------------------------- small helpers -------------------------- */
 async function listFilesByPrefixLocal(prefix) {
+  const BUCKET = await getS3BucketName();
   const out = await s3.send(new ListObjectsV2Command({
     Bucket: BUCKET,
     Prefix: prefix
@@ -35,6 +23,7 @@ async function listFilesByPrefixLocal(prefix) {
 }
 
 async function getObjectBufferLocal(Key) {
+  const BUCKET = await getS3BucketName();
   const out = await s3.send(new GetObjectCommand({ Bucket: BUCKET, Key }));
   // Support both Node body helpers
   return out.Body?.transformToByteArray
