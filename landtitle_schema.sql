@@ -13,8 +13,8 @@ USE landtitle;
 -- ---------- Lookups / reference tables ----------
 DROP TABLE IF EXISTS Abstract;
 CREATE TABLE Abstract (
-  abstractID INT PRIMARY KEY AUTO_INCREMENT
-  abstractCode VARCHAR(50) NOT NULL,
+  abstractID INT PRIMARY KEY AUTO_INCREMENT,
+  abstractCode VARCHAR(50),
   name VARCHAR(255) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -47,6 +47,7 @@ CREATE TABLE `User` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ---------- Document ----------
+DROP TABLE IF EXISTS Document;
 CREATE TABLE Document (
   documentID INT PRIMARY KEY AUTO_INCREMENT,
 
@@ -93,13 +94,13 @@ CREATE TABLE Document (
 
   INDEX idx_doc_instr (instrumentNumber),
   INDEX idx_doc_dates (filingDate, fileStampDate),
-  INDEX idx_doc_fk_abs_code (abstractCode),
   INDEX idx_doc_fk_abs_id (abstractID),
   INDEX idx_doc_fk_booktype (bookTypeID),
   INDEX idx_doc_fk_subdiv (subdivisionID),
   INDEX idx_doc_fk_county (countyID),
 
-  CONSTRAINT fk_doc_abstractCode FOREIGN KEY (abstractCode) REFERENCES Abstract(abstractCode) ON DELETE SET NULL,
+  UNIQUE INDEX uniq_doc_prserv (PRSERV),
+
   CONSTRAINT fk_doc_abstractID FOREIGN KEY (abstractID) REFERENCES Abstract(abstractID) ON DELETE SET NULL,
   CONSTRAINT fk_doc_booktype FOREIGN KEY (bookTypeID) REFERENCES BookType(bookTypeID) ON DELETE SET NULL,
   CONSTRAINT fk_doc_subdivision FOREIGN KEY (subdivisionID) REFERENCES Subdivision(subdivisionID) ON DELETE SET NULL,
