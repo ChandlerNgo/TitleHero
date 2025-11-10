@@ -31,6 +31,24 @@ async function getObjectBufferLocal(Key) {
     : Buffer.from(await out.Body.arrayBuffer());
 }
 
+async function insertParties(pool, documentID, role, names) {
+  const raw = (names ?? '').trim();
+  if (!raw) return;
+
+  // Split on common separators: ; , / & "and"
+  const parts = raw
+    .split(/(?:\band\b|[;,/&])/gi)
+    .map(s => s.trim())
+    .filter(Boolean);
+
+  for (const name of parts) {
+    await pool.query(
+      'INSERT INTO Party (documentID, role, name) VALUES (?,?,?)',
+      [documentID, role, name]
+    );
+  }
+}
+
 
 function nn(v) {
   // normalize: '' -> null, trim strings
@@ -140,51 +158,32 @@ app.post('/documents', async (req, res) => {
       fieldNotes = null
     } = req.body || {};
 
-    const params = [
-      nn(abstractCode),
-      nn(bookTypeID),
-      nn(subdivisionID),
-      nn(countyID),
-      nn(instrumentNumber),
-      nn(book),
-      nn(volume),
-      nn(page),
-      nn(grantor),
-      nn(grantee),
-      nn(instrumentType),
-      nn(remarks),
-      toDecimalOrNull(lienAmount),
-      nn(legalDescription),
-      nn(subBlock),
-      nn(abstractText),
-      toDecimalOrNull(acres),
-      nn(fileStampDate),
-      nn(filingDate),
-      nn(nFileReference),
-      nn(finalizedBy),
-      Number.isInteger(exportFlag) ? exportFlag : (exportFlag ? 1 : 0),
-      nn(propertyType),
-      nn(GFNNumber),
-      nn(marketShare),
-      nn(sortArray),
-      nn(address),
-      nn(CADNumber),
-      nn(CADNumber2),
-      nn(GLOLink),
-      nn(fieldNotes)
-    ];
+
 
     const [result] = await pool.query(
-      `INSERT INTO Document (
-        abstractCode, bookTypeID, subdivisionID, countyID,
-        instrumentNumber, book, volume, \`page\`, grantor, grantee,
-        instrumentType, remarks, lienAmount, legalDescription, subBlock,
-        abstractText, acres, fileStampDate, filingDate, nFileReference,
-        finalizedBy, exportFlag, propertyType, GFNNumber, marketShare,
-        sortArray, address, CADNumber, CADNumber2, GLOLink, fieldNotes
-      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-      params
-    );
+    `INSERT INTO Document (
+      abstractCode, bookTypeID, subdivisionID, countyID,
+      instrumentNumber, book, volume, \`page\`,
+      instrumentType, remarks, lienAmount, legalDescription, subBlock,
+      abstractText, acres, fileStampDate, filingDate, nFileReference,
+      finalizedBy, exportFlag, propertyType, GFNNumber, marketShare,
+      sortArray, address, CADNumber, CADNumber2, GLOLink, fieldNotes
+    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+    [
+      nn(abstractCode), nn(bookTypeID), nn(subdivisionID), nn(countyID),
+      nn(instrumentNumber), nn(book), nn(volume), nn(page),
+      nn(instrumentType), nn(remarks), toDecimalOrNull(lienAmount), nn(legalDescription), nn(subBlock),
+      nn(abstractText), toDecimalOrNull(acres), nn(fileStampDate), nn(filingDate), nn(nFileReference),
+      nn(finalizedBy), Number.isInteger(exportFlag) ? exportFlag : (exportFlag ? 1 : 0),
+      nn(propertyType), nn(GFNNumber), nn(marketShare),
+      nn(sortArray), nn(address), nn(CADNumber), nn(CADNumber2), nn(GLOLink), nn(fieldNotes)
+    ]
+  );
+
+  const docId = result.insertId;
+  await insertParties(pool, docId, 'Grantor', grantor);
+  await insertParties(pool, docId, 'Grantee', grantee);
+
 
     res.status(201).json({
       message: 'Document created successfully',
@@ -390,8 +389,6 @@ app.post('/documents/ocr', upload.array('files', 20), async (req, res) => {
       nn(d.book),
       nn(d.volume),
       nn(d.page),
-      nn(d.grantor),
-      nn(d.grantee),
       nn(d.instrumentType),
       nn(d.remarks),
       toDecimalOrNull(d.lienAmount),
@@ -418,14 +415,19 @@ app.post('/documents/ocr', upload.array('files', 20), async (req, res) => {
     const [result] = await pool.query(
       `INSERT INTO Document (
         abstractCode, bookTypeID, subdivisionID, countyID,
-        instrumentNumber, book, volume, \`page\`, grantor, grantee,
+        instrumentNumber, book, volume, \`page\`,
         instrumentType, remarks, lienAmount, legalDescription, subBlock,
         abstractText, acres, fileStampDate, filingDate, nFileReference,
         finalizedBy, exportFlag, propertyType, GFNNumber, marketShare,
         sortArray, address, CADNumber, CADNumber2, GLOLink, fieldNotes
-      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-      insertParams
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+       insertParams
     );
+
+    const docId = result.insertId;
+    await insertParties(pool, docId, 'Grantor', d.grantor);
+    await insertParties(pool, docId, 'Grantee', d.grantee);
+
 
     await pool.query('COMMIT');
 
@@ -563,12 +565,13 @@ app.put('/documents/:id', async (req, res) => {
 
     const updatable = new Set([
       'abstractCode','bookTypeID','subdivisionID','countyID',
-      'instrumentNumber','book','volume','page','grantor','grantee',
+      'instrumentNumber','book','volume','page',
       'instrumentType','remarks','lienAmount','legalDescription','subBlock',
       'abstractText','acres','fileStampDate','filingDate','nFileReference',
       'finalizedBy','exportFlag','propertyType','GFNNumber','marketShare',
       'sortArray','address','CADNumber','CADNumber2','GLOLink','fieldNotes'
     ]);
+
 
     const body = req.body || {};
     const sets = [];
