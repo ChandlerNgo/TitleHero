@@ -444,9 +444,10 @@ export default function Dashboard() {
       alert("No PRSERV prefix available for this record.");
       return;
     }
-    const url = `${API_BASE}/documents/pdf?prefix=${encodeURIComponent(prefix.trim())}`;
+    const url = `/api/documents/pdf?prefix=${encodeURIComponent(prefix.trim())}`;
     window.open(url, "_blank", "noopener,noreferrer");
   }
+
 
   function openPdfById(documentID?: number) {
     if (!documentID) return;
@@ -756,18 +757,13 @@ export default function Dashboard() {
                         <>
                           <button
                             className="btn tiny"
-                            onClick={() => {
-                              // Prefer documentID route if you added it; otherwise fall back to prefix.
-                              if (row.documentID) {
-                                openPdfById(row.documentID);
-                              } else {
-                                openPdfByPrefix(row.PRSERV);
-                              }
-                            }}
-                            title={row.PRSERV ? `Open ${row.PRSERV}.pdf` : "Open PDF"}
+                            onClick={() => openPdfByPrefix(row?.PRSERV)}
+                            title={row?.PRSERV ? `Open ${row.PRSERV}.pdf` : "No PRSERV available"}
+                            disabled={!row?.PRSERV}
                           >
                             View
                           </button>
+
                           <button className="btn tiny" onClick={() => beginEdit(row)}>Edit</button>
                           <button className="btn tiny danger" onClick={() => deleteRow(row.documentID)}>Delete</button>
                         </>
