@@ -449,14 +449,6 @@ export default function Dashboard() {
   }
 
 
-  function openPdfById(documentID?: number) {
-    if (!documentID) return;
-    const url = `${API_BASE}/documents/${documentID}/pdf`;
-    window.open(url, "_blank", "noopener,noreferrer");
-  }
-
-
-
   return (
     <div className="app">
       {/* Sidebar */}
