@@ -439,6 +439,23 @@ export default function Dashboard() {
     }
   }
 
+  function openPdfByPrefix(prefix?: string | null) {
+    if (!prefix || !prefix.trim()) {
+      alert("No PRSERV prefix available for this record.");
+      return;
+    }
+    const url = `${API_BASE}/documents/pdf?prefix=${encodeURIComponent(prefix.trim())}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
+
+  function openPdfById(documentID?: number) {
+    if (!documentID) return;
+    const url = `${API_BASE}/documents/${documentID}/pdf`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
+
+
+
   return (
     <div className="app">
       {/* Sidebar */}
@@ -729,19 +746,34 @@ export default function Dashboard() {
                   {row.exportFlag ? <span className="badge">Exported</span> : null}
 
                   {/* ACTIONS */}
-                  <div className="row-actions">
-                    {editId === row.documentID ? (
-                      <>
-                        <button className="btn tiny" onClick={() => saveEdit(row.documentID)}>Save</button>
-                        <button className="btn tiny ghost" onClick={cancelEdit}>Cancel</button>
-                      </>
-                    ) : (
-                      <>
-                        <button className="btn tiny" onClick={() => beginEdit(row)}>Edit</button>
-                        <button className="btn tiny danger" onClick={() => deleteRow(row.documentID)}>Delete</button>
-                      </>
-                    )}
-                  </div>
+                    <div className="row-actions">
+                      {editId === row.documentID ? (
+                        <>
+                          <button className="btn tiny" onClick={() => saveEdit(row.documentID)}>Save</button>
+                          <button className="btn tiny ghost" onClick={cancelEdit}>Cancel</button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            className="btn tiny"
+                            onClick={() => {
+                              // Prefer documentID route if you added it; otherwise fall back to prefix.
+                              if (row.documentID) {
+                                openPdfById(row.documentID);
+                              } else {
+                                openPdfByPrefix(row.PRSERV);
+                              }
+                            }}
+                            title={row.PRSERV ? `Open ${row.PRSERV}.pdf` : "Open PDF"}
+                          >
+                            View
+                          </button>
+                          <button className="btn tiny" onClick={() => beginEdit(row)}>Edit</button>
+                          <button className="btn tiny danger" onClick={() => deleteRow(row.documentID)}>Delete</button>
+                        </>
+                      )}
+                    </div>
+
                 </div>
               </div>
 

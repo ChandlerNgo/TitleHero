@@ -1,8 +1,20 @@
 const express = require('express');
 const { getPool, getOpenAPIKey, getS3BucketName } = require('../config');
-const { listFilesByPrefix, getObjectBuffer } = require('../utils/s3Utils');
+const { S3Client, ListObjectsV2Command, GetObjectCommand } = require('@aws-sdk/client-s3');
+
+// S3 client (v3)
+// Resolve the bucket ONCE; prefer config function, then env
+const rawBucket =
+  (typeof getS3BucketName === 'function' ? getS3BucketName() : undefined) ??
+  process.env.S3_BUCKET ??
+  '';
+const BUCKET = String(rawBucket).trim();
+if (!BUCKET) {
+  console.error('FATAL: S3 bucket not configured. Set via getS3BucketName() or S3_BUCKET env.');
+  // throw new Error('S3 bucket not configured'); // uncomment to hard-fail on boot
+}
+
 const { PDFDocument } = require('pdf-lib');
-const { S3Client } = require('@aws-sdk/client-s3');
 const multer = require('multer');
 const sharp = require('sharp');
 const { OpenAI } = require('openai');
@@ -11,6 +23,26 @@ const s3 = new S3Client({ region: 'us-east-2' });
 const app = express();
 
 /* -------------------------- small helpers -------------------------- */
+async function listFilesByPrefixLocal(prefix) {
+  const out = await s3.send(new ListObjectsV2Command({
+    Bucket: BUCKET,
+    Prefix: prefix
+  }));
+  const keys = (out.Contents || []).map(o => o.Key).filter(Boolean);
+  // keep numeric order like PR123.1.tif, PR123.2.tif
+  keys.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+  return keys;
+}
+
+async function getObjectBufferLocal(Key) {
+  const out = await s3.send(new GetObjectCommand({ Bucket: BUCKET, Key }));
+  // Support both Node body helpers
+  return out.Body?.transformToByteArray
+    ? Buffer.from(await out.Body.transformToByteArray())
+    : Buffer.from(await out.Body.arrayBuffer());
+}
+
+
 function nn(v) {
   // normalize: '' -> null, trim strings
   if (v === undefined || v === null) return null;
@@ -613,7 +645,7 @@ app.get('/documents/pdf', async (req, res) => {
     }
 
     const prefix = `Washington/${userPrefix}.`;
-    const keys = await listFilesByPrefix(prefix);
+    const keys = await listFilesByPrefixLocal(prefix);
 
     if (keys.length === 0) {
       return res.status(404).json({ error: 'No files found for prefix' });
@@ -623,7 +655,7 @@ app.get('/documents/pdf', async (req, res) => {
 
     for (const key of keys) {
       // Download TIFF from S3
-      const tiffBuffer = await getObjectBuffer(key);
+      const tiffBuffer = await getObjectBufferLocal(key);
       
       // Create sharp instance per file
       const image = sharp(tiffBuffer);
