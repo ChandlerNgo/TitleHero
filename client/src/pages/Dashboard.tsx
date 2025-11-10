@@ -596,7 +596,9 @@ export default function Dashboard() {
 
                   <div className="kv wide">
                     <b>Parties:</b>
-                    <span>{fmtParty(row.grantor)} <span className="muted">→</span> {fmtParty(row.grantee)}</span>
+                    <span>
+                      {fmtParty(row.grantors || row.grantor)} <span className="muted">→</span> {fmtParty(row.grantees || row.grantee)}
+                    </span>
                   </div>
 
                   <div className="kv">

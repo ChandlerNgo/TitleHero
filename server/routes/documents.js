@@ -428,12 +428,12 @@ app.get('/documents/search', async (req, res) => {
   try {
     const pool = await getPool();
 
-    // text / numeric / dates
+    // classify fields
     const textLike = new Set([
-      'instrumentNumber','book','volume','page','grantor','grantee','instrumentType',
+      'instrumentNumber','book','volume','page','instrumentType',
       'remarks','legalDescription','subBlock','abstractText','propertyType',
       'marketShare','sortArray','address','CADNumber','CADNumber2','GLOLink','fieldNotes',
-      'finalizedBy','nFileReference','abstractCode' // abstractCode is VARCHAR
+      'finalizedBy','nFileReference','abstractCode' // VARCHAR exact below
     ]);
     const numericEq = new Set([
       'documentID','bookTypeID','subdivisionID','countyID','exportFlag','GFNNumber'
@@ -443,6 +443,7 @@ app.get('/documents/search', async (req, res) => {
     const limit  = Math.min(parseInt(req.query.limit ?? '50', 10) || 50, 200);
     const offset = Math.max(parseInt(req.query.offset ?? '0', 10) || 0, 0);
 
+    // build WHERE over alias "d" (Document)
     const where = [];
     const params = [];
 
@@ -451,45 +452,73 @@ app.get('/documents/search', async (req, res) => {
       const v = String(vRaw ?? '').trim();
       if (!v) continue;
 
-      if (numericEq.has(k)) {
-        where.push(`\`${k}\` = ?`);
+      if (k === 'grantor') {
+        // Party search for Grantor
+        where.push(`EXISTS (SELECT 1 FROM Party pt WHERE pt.documentID = d.documentID AND pt.role = 'Grantor' AND pt.name LIKE ?)`);
+        params.push(`%${v}%`);
+      } else if (k === 'grantee') {
+        // Party search for Grantee
+        where.push(`EXISTS (SELECT 1 FROM Party pt WHERE pt.documentID = d.documentID AND pt.role = 'Grantee' AND pt.name LIKE ?)`);
+        params.push(`%${v}%`);
+      } else if (numericEq.has(k)) {
+        where.push(`d.\`${k}\` = ?`);
         params.push(v);
       } else if (dateEq.has(k)) {
         const range = v.split('..');
         if (range.length === 2) {
-          where.push(`\`${k}\` BETWEEN ? AND ?`);
+          where.push(`d.\`${k}\` BETWEEN ? AND ?`);
           params.push(range[0], range[1]);
         } else {
-          where.push(`DATE(\`${k}\`) = DATE(?)`);
+          where.push(`DATE(d.\`${k}\`) = DATE(?)`);
           params.push(v);
         }
       } else if (textLike.has(k)) {
-        // exact match for abstractCode if you prefer:
         if (k === 'abstractCode') {
-          where.push('`abstractCode` = ?');
+          where.push('d.`abstractCode` = ?');
           params.push(v);
         } else {
-          where.push(`\`${k}\` LIKE ?`);
+          where.push(`d.\`${k}\` LIKE ?`);
           params.push(`%${v}%`);
         }
       }
     }
 
+    // freeform criteria: include Party names too
     const criteria = String(req.query.criteria ?? '').trim();
     if (criteria) {
-      const critCols = [
-        'instrumentNumber','grantor','grantee','instrumentType','legalDescription',
-        'remarks','address','CADNumber','CADNumber2','book','volume','page','abstractText','fieldNotes'
+      const docCols = [
+        'instrumentNumber','instrumentType','legalDescription','remarks','address',
+        'CADNumber','CADNumber2','book','volume','page','abstractText','fieldNotes'
       ];
-      const orParts = critCols.map(c => `\`${c}\` LIKE ?`).join(' OR ');
-      where.push(`(${orParts})`);
-      for (let i = 0; i < critCols.length; i++) params.push(`%${criteria}%`);
+      const orParts = docCols.map(c => `d.\`${c}\` LIKE ?`);
+
+      // add EXISTS for parties
+      orParts.push(`EXISTS (SELECT 1 FROM Party px WHERE px.documentID = d.documentID AND px.name LIKE ?)`);
+      // push params for docCols
+      for (let i = 0; i < docCols.length; i++) params.push(`%${criteria}%`);
+      // param for party EXISTS
+      params.push(`%${criteria}%`);
+
+      where.push(`(${orParts.join(' OR ')})`);
     }
 
-    let sql = 'SELECT * FROM Document';
-    if (where.length) sql += ' WHERE ' + where.join(' AND ');
-    sql += ' ORDER BY (updated_at IS NULL), updated_at DESC, (created_at IS NULL), created_at DESC';
-    sql += ' LIMIT ? OFFSET ?';
+    // final SQL with joins + aggregation
+    let sql = `
+      SELECT
+        d.*,
+        c.name AS countyName,
+        GROUP_CONCAT(CASE WHEN p.role = 'Grantor' THEN p.name END SEPARATOR '; ') AS grantors,
+        GROUP_CONCAT(CASE WHEN p.role = 'Grantee' THEN p.name END SEPARATOR '; ') AS grantees
+      FROM Document d
+      LEFT JOIN County c ON c.countyID = d.countyID
+      LEFT JOIN Party  p ON p.documentID = d.documentID
+    `;
+    if (where.length) sql += ` WHERE ${where.join(' AND ')}`;
+    sql += `
+      GROUP BY d.documentID
+      ORDER BY (d.updated_at IS NULL), d.updated_at DESC, (d.created_at IS NULL), d.created_at DESC
+      LIMIT ? OFFSET ?
+    `;
     params.push(limit, offset);
 
     const [rows] = await pool.query(sql, params);
@@ -499,6 +528,7 @@ app.get('/documents/search', async (req, res) => {
     res.status(500).json({ error: 'Failed to search documents' });
   }
 });
+
 
 /* -------------------------- update / delete --------------------------- */
 app.put('/documents/:id', async (req, res) => {
