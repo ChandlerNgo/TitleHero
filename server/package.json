@@ -11,6 +11,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.927.0",
     "aws-sdk": "^2.1692.0",
     "bcrypt": "^5.1.1",
     "cors": "^2.8.5",
@@ -20,6 +21,7 @@
     "mysql2": "^3.15.3",
     "nodemon": "^3.1.10",
     "openai": "^6.7.0",
-    "sharp": "^0.34.4"
+    "pdf-lib": "^1.17.1",
+    "sharp": "^0.34.5"
   }
 }

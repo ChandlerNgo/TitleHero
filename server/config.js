@@ -56,4 +56,15 @@ async function getPool(){
     return pool;
 }
 
-module.exports = {getPool, getOpenAPIKey};
+async function getS3BucketName() {
+  if (isDev) {
+    return process.env.AWS_S3_BUCKET_NAME;
+  } else {
+    const client = new AWS.SecretsManager({ region: 'us-east-2' });
+    const data = await client.getSecretValue({ SecretId: 'prod/db-creds' }).promise();
+    const secret = JSON.parse(data.SecretString);
+    return secret.s3_bucket_name;
+  }
+}
+
+module.exports = {getPool, getOpenAPIKey, getS3BucketName};

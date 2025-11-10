@@ -1,8 +1,12 @@
 const express = require('express');
-const { getPool, getOpenAPIKey } = require('../config');
+const { getPool, getOpenAPIKey, getS3BucketName } = require('../config');
+const { listFilesByPrefix, getObjectBuffer } = require('../utils/s3Utils');
+const { PDFDocument } = require('pdf-lib');
+const { S3Client } = require('@aws-sdk/client-s3');
 const multer = require('multer');
 const sharp = require('sharp');
 const { OpenAI } = require('openai');
+const s3 = new S3Client({ region: 'us-east-2' });
 
 const app = express();
 
@@ -568,6 +572,63 @@ app.delete('/documents/:id', async (req, res) => {
   } catch (err) {
     console.error('Delete error:', err);
     res.status(500).json({ error: 'Failed to delete document' });
+  }
+});
+
+app.get('/documents/pdf', async (req, res) => {
+  try {
+    const userPrefix = req.query.prefix || '';
+    if (!userPrefix) {
+      return res.status(400).json({ error: 'prefix query param is required' });
+    }
+
+    const prefix = `Washington/${userPrefix}.`;
+    const keys = await listFilesByPrefix(prefix);
+
+    if (keys.length === 0) {
+      return res.status(404).json({ error: 'No files found for prefix' });
+    }
+
+    const pdfDoc = await PDFDocument.create();
+
+    for (const key of keys) {
+      // Download TIFF from S3
+      const tiffBuffer = await getObjectBuffer(key);
+      
+      // Create sharp instance per file
+      const image = sharp(tiffBuffer);
+
+      // Get number of pages in the TIFF
+      const metadata = await image.metadata();
+      const pageCount = metadata.pages;
+
+      for (let pageIndex = 0; pageIndex < pageCount; pageIndex++) {
+        // Extract single page from multi-page TIFF
+        const pngBuffer = await sharp(tiffBuffer, { page: pageIndex }).png().toBuffer();
+
+        // Embed PNG in PDF
+        const pngImage = await pdfDoc.embedPng(pngBuffer);
+
+        // Add a page and draw the image full page
+        const page = pdfDoc.addPage([pngImage.width, pngImage.height]);
+        page.drawImage(pngImage, {
+          x: 0,
+          y: 0,
+          width: pngImage.width,
+          height: pngImage.height,
+        });
+      }
+    }
+
+    // Save and send the PDF
+    const pdfBytes = await pdfDoc.save();
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${userPrefix}.pdf"`);
+    res.send(Buffer.from(pdfBytes));
+  } catch (error) {
+    console.error('Error generating PDF:', error);
+    res.status(500).json({ error: 'Failed to generate PDF' });
   }
 });
 
