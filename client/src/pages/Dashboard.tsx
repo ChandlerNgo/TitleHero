@@ -444,9 +444,10 @@ export default function Dashboard() {
       alert("No PRSERV prefix available for this record.");
       return;
     }
-    const url = `/api/documents/pdf?prefix=${encodeURIComponent(prefix.trim())}`;
+    const url = `${API_BASE}/documents/pdf?prefix=${encodeURIComponent(prefix.trim())}`;
     window.open(url, "_blank", "noopener,noreferrer");
   }
+
 
 
   return (
