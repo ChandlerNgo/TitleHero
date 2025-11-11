@@ -592,7 +592,7 @@ export default function Dashboard() {
                   <div className="badges">
                     {row.instrumentType && <span className="badge">{row.instrumentType}</span>}
                     {row.propertyType && <span className="badge">{row.propertyType}</span>}
-                    {row.exportFlag ? <span className="badge">Exported</span> : null}
+                    {row.exportFlag ? <span className="badge">Uploaded</span> : null}
                   </div>
                 </div>
 
@@ -737,7 +737,7 @@ export default function Dashboard() {
                 <div className="doc-head">
 
                 <div className="badges">
-                  {row.exportFlag ? <span className="badge">Exported</span> : null}
+                  {row.exportFlag ? <span className="badge">Uploaded</span> : null}
 
                   {/* ACTIONS */}
                     <div className="row-actions">
