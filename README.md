@@ -1,3 +1,5 @@
+# For both, ensure you are in the server directory
+
 # Create Admin:
 
 ```
