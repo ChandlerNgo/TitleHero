@@ -35,7 +35,7 @@ app.post('/login', async (req, res) => {
 });
 
 app.post('/signup', async (req, res) => {
-    const { username, password, isAdmin } = req.body;
+    const { username, password, isAdmin, permissions } = req.body;
     console.log('Signup request received:', { username, isAdmin });
 
     if (!username || !password) {
@@ -45,10 +45,10 @@ app.post('/signup', async (req, res) => {
     try {
         let userId;
         if (isAdmin) {
-            userId = await createUser(username, password, 'admin');
+            userId = await createUser(username, password, 'admin', permissions);
             console.log('Admin created with ID:', userId);
         } else {
-            userId = await createUser(username, password, 'user');
+            userId = await createUser(username, password, 'user', permissions);
             console.log('User created with ID:', userId);
         }
         
