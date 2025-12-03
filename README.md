@@ -60,6 +60,7 @@ TitleHero depends on the following platform tools:
 
 ## Configuration
 Both the backend and frontend require environment variables for secure operation.
+The values for the environment variables are found on AWS secrets manager. 
 
 ### Backend `.env`
 ```bash
