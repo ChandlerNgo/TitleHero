@@ -177,7 +177,7 @@ Extracted metadata
 
 Direct links to images stored in S3
 
-4. Review OCR Output
+**4. Review OCR Output**
 
 Each uploaded document has an OCR record with:
 
