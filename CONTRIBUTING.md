@@ -72,4 +72,4 @@ TitleHero powers title examination workflows for Bluebonnet Title & Abstract LLC
 - Report security concerns privately to the sponsor (Shane/Bobbye) before disclosing issues publicly.
 
 ## Questions
-If anything is unclear, open a draft PR or reach out to the maintainers for guidance. Clear communication keeps the project moving quickly while protecting production uptime.
+If anything is unclear, open a draft PR or reach out to the maintainers/Shane or Bobbye for guidance. Clear communication keeps the project moving quickly while protecting production uptime.
