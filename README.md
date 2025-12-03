@@ -1,98 +1,68 @@
-**TitleHero – AI-Powered Title Examination Platform**
+# TitleHero - AI-Powered Title Examination Platform
 
-TitleHero is an intelligent document-processing system designed to modernize and streamline the title examination workflow for title companies. The platform automates document ingestion, OCR, metadata extraction, indexing, and searching—dramatically reducing the time required to locate, organize, and verify property records.
+TitleHero modernizes the title examination workflow by automating document ingestion, OCR, metadata extraction, indexing, and search. The platform was built for Bluebonnet Title & Abstract LLC to replace manual review with a fast, accurate, cloud-powered solution that keeps title professionals focused on analysis instead of paperwork.
 
-Built for Bluebonnet Title & Abstract LLC, TitleHero replaces outdated manual processes with a fast, accurate, cloud-powered solution.
+## Table of Contents
+- [Overview](#overview)
+- [Requirements](#requirements)
+- [Tech Stack](#tech-stack)
+- [External Dependencies](#external-dependencies)
+- [Configuration](#configuration)
+- [Installation & Setup](#installation--setup)
+- [Deployment](#deployment)
+- [Usage](#usage)
+- [Features](#features)
+- [Documentation](#documentation)
+- [Team & Sponsor](#team--sponsor)
+- [License](#license)
+- [Third-Party Libraries](#third-party-libraries)
+- [Contact](#contact)
 
-**Table of Contents**
-- Project Title and Description
-- Requirements
-- External Dependencies
-- Environment Variables / Configuration
-- Installation & Setup
-- Deployment
-- Usage
-- Features
-- Documentation
-- Credits & Acknowledgments
-- License
-- Third-Party Libraries
-- Contact Information
-- Requirements
+## Overview
+TitleHero ingests scanned packets, performs multi-page OCR, stores artifacts in S3, indexes records in MySQL, and exposes a React dashboard for search and review. Built as a capstone project for Texas A&M University, the system streamlines locating, organizing, and verifying property records and can be deployed to AWS with minimal manual intervention.
 
-TitleHero has been developed and tested with the following stack.
+## Requirements
+- OS: macOS, Windows, or Ubuntu
+- Node.js v18+
+- npm v9+
+- MySQL v8.0+ (AWS RDS in production)
+- AWS account (EC2, S3, RDS, Secrets Manager, VPC)
+- Postman for API testing
 
-**Environment**
+## Tech Stack
+### Backend
+- Node.js + Express
+- MySQL2
+- Sharp (TIFF -> PNG conversion)
+- AWS SDK
+- Multer
+- JSON Web Tokens / Cognito integration
 
-OS: macOS / Windows / Ubuntu
+### Frontend
+- React (Vite + TypeScript)
+- Axios
+- TailwindCSS
 
-Node.js v18+
+### Tooling
+- Git & GitHub
+- AWS CLI
+- VS Code
+- GitHub Actions (optional CI/CD)
+- Postman
 
-npm v9+
+## External Dependencies
+TitleHero depends on the following platform tools:
+- Git - https://git-scm.com
+- Node.js - https://nodejs.org
+- MySQL - https://dev.mysql.com/downloads
+- AWS CLI - https://aws.amazon.com/cli
+- Postman - https://www.postman.com/downloads
 
-MySQL v8.0+ (AWS RDS in production)
+## Configuration
+Both the backend and frontend require environment variables for secure operation.
 
-AWS (EC2, S3, RDS, Secrets Manager, VPC)
-
-Postman (API Testing)
-
-**Backend**
-
-Express.js
-
-MySQL2
-
-Sharp (for TIFF → PNG conversion)
-
-AWS SDK
-
-Multer
-
-JSON Web Tokens (JWT) / Cognito integration (depending on deployment)
-
-Frontend
-
-React
-
-TypeScript
-
-Vite
-
-Axios
-
-TailwindCSS
-
-Tools
-
-Git & GitHub
-
-AWS CLI
-
-VSCode
-
-GitHub Actions (optional CI/CD)
-
-Postman for API testing
-
-External Dependencies
-
-**TitleHero relies on a few platform-level tools:**
-
-Git – [https://git-scm.com](https://github.com/ChandlerNgo/TitleHero)
-
-Node.js – https://nodejs.org
-
-MySQL – https://dev.mysql.com/downloads/
-
-AWS CLI – https://aws.amazon.com/cli/
-
-Postman – https://www.postman.com/downloads/
-
-Environment Variables / Configuration
-
-Both backend and frontend require environment variables for secure operation.
-
-Backend .env example
+### Backend `.env`
+```bash
 DB_HOST=
 DB_USER=
 DB_PASSWORD=
@@ -107,172 +77,89 @@ S3_BUCKET_NAME=
 
 OPENAI_API_KEY=
 OPENAI_MODEL=title_packet
+```
 
-Frontend .env example
+### Frontend `.env`
+```bash
 VITE_API_BASE_URL=http://localhost:3001
+```
 
-Production (AWS) Secrets
+### Production Secrets
+All production secrets (database credentials, OpenAI API keys, and S3 configuration) live in AWS Secrets Manager. Rotate them regularly and limit IAM access to least privilege.
 
-All secrets for production deployment are stored in AWS Secrets Manager, including:
+## Installation & Setup
+1. Clone the repository and install dependencies for both workspaces.
+   ```bash
+   npm install          # in /server
+   npm install          # in /client
+   ```
+2. Configure the `.env` files described above.
+3. Ensure MySQL is running and migrated with the required schema.
+4. Start the backend and frontend.
+   ```bash
+   npm run dev          # server
+   npm run dev          # client
+   ```
 
-Database credentials
+## Deployment
+1. Provision AWS infrastructure (EC2, S3, RDS, Secrets Manager, and VPC networking).
+2. Configure CI/CD (GitHub Actions or manual scripts) to build the client and deploy the server.
+3. Sync environment variables with AWS Secrets Manager and inject them into the runtime.
+4. Point DNS or load balancers to the deployed frontend and API.
 
-OpenAI API key
+## Usage
+1. **Upload Source Documents** - Drop TIFF, PDF, or image bundles. Sharp converts TIFFs to PNGs and the OCR pipeline processes multi-page documents.
+2. **Search Title Records** - Filter by grantor, grantee, abstract code, subdivision, instrument number, book/page, or filing date.
+3. **Review Results** - See document metadata, filing details, and links to S3 artifacts directly from the dashboard.
+4. **Inspect OCR Output** - Each document stores extracted text, parsed metadata, and any pipeline errors to aid troubleshooting.
 
-S3 bucket configuration
+## Features
+### AI-Powered OCR Pipeline
+- Multi-format ingestion with TIFF -> PNG conversion
+- Multi-page handling with error tracking
+- OpenAI-powered parsing and metadata extraction
 
-Installation & Setup
+### Search & Indexing System
+- MySQL schema optimized for fast lookup
+- Normalized lookup tables for clean data
+- Instant filtering in the React dashboard
 
-
-**Deployment Steps:**
-
-
-
-Usage
-
-TitleHero provides a clean, easy-to-use workflow for title examiners:
-
-**1. Upload Documents**
-
-Users drag and drop TIFF/PDF files.
-The backend automatically:
-
-Converts pages
-
-Runs OCR via OpenAI
-
-Extracts metadata
-
-Creates lookup tables (Grantor, Grantee, Abstract Code, etc.)
-
-Stores files in S3
-
-**2. Search by Any Field**
-
-Search fields include:
-
-Grantor
-
-Grantee
-
-Abstract Code
-
-Subdivision
-
-Instrument Number
-
-Book/Page
-
-Filing Date
-
-**3. View Results Instantly**
-
-The result table provides:
-
-Document name
-
-Filing details
-
-Extracted metadata
-
-Direct links to images stored in S3
-
-**4. Review OCR Output**
-
-Each uploaded document has an OCR record with:
-
-Extracted text
-
-Parsed metadata
-
-Any pipeline errors for debugging
-
-**Features**
-
-AI-Powered OCR Pipeline
-- TIFF → PNG conversion
-- Multi-page handling
-- Robust parsing using OpenAI models
-
-Search & Indexing System
-- MySQL schema optimized for fast queries
-- Lookup tables for clean data normalization
-
-Cloud-Native Architecture
-- S3 for file storage
+### Cloud-Native Architecture
+- S3 for durable file storage
 - RDS for relational data
-- EC2 for backend
-- Secure Secrets Manager integration
+- EC2-hosted backend with Secrets Manager integration
 
-Structured React Frontend
-- Responsive UI
-- Real-time table filtering
-- Pagination (optional)
+### Structured React Frontend
+- Responsive UI styled with TailwindCSS
+- Real-time table filtering and optional pagination
+- Direct links to OCR artifacts and images
 
-Error Handling & Logging
-- Backend logs for OCR failures
-- Page-level conversion errors
-- S3 upload tracking
+### Error Handling & Logging
+- Backend logs capture OCR failures
+- Per-page conversion diagnostics
+- Upload tracking for every pipeline step
 
+## Documentation
+Final Capstone Report (Texas A&M CSCE 482, Spring 2025) available in Teams Folder. Additional architectural notes, ERDs, or sequence diagrams are all in the Final Capstone Report. 
 
+## Team & Sponsor
+- Dhruv Halderia
+- Casey Sorsdal
+- Julia Simko
+- Chandler Ngo
 
-Final Capstone Report
+**Sponsor:** Bluebonnet Title & Abstract LLC (special thanks to Shane, Bobbye, and the Bluebonnet staff for testing, feedback, and real-world guidance).
 
-If these aren't created yet, I can generate them for you.
+## License
+This project is private and was developed exclusively for Bluebonnet Title & Abstract LLC under the Texas A&M University Capstone Program. License terms can be added once finalized with the sponsor.
 
+## Third-Party Libraries
+- Frontend: React, TailwindCSS, Axios
+- Backend: Express, MySQL2, Sharp, AWS SDK, Multer
+- AI/OCR: OpenAI API
+- Dev Tooling: Nodemon, PM2, Vite
 
+## Contact
+For project questions, please reach out to Shane or Bobbye at Bluebonnet Title & Abstract LLC.
 
-Team TitleHero (CSCE 482 – Spring 2025)
-
-Dhruv Halderia
-
-Casey Sorsdal
-
-Julia Simko
-
-Chandler Ngo
-
-Sponsor
-
-Bluebonnet Title & Abstract LLC
-
-Special thanks to Shane, Bobbye, and the Bluebonnet staff for testing, feedback, and real-world guidance.
-
-Technologies
-
-AWS
-
-OpenAI GPT Models
-
-React
-
-Node.js / Express
-
-MySQL
-
-Sharp
-
-License
-
-This project is private and developed exclusively for Bluebonnet Title & Abstract LLC under Texas A&M University’s Capstone Program.
-
-License terms can be added depending on sponsor requirements.
-
-Third-Party Libraries
-
-Notable libraries include:
-
-Frontend: React, CSS
-
-Backend: Express, MySQL2, Sharp, AWS SDK, Multer
-
-AI/OCR: OpenAI API
-
-Dev Tools: Nodemon, PM2, Vite
-
-Contact Information
-
-For questions regarding this project:
-Please reach out to Shane or Bobbye
-
-Project Repository: [(insert GitHub link)](https://github.com/ChandlerNgo/TitleHero)
+Repository: https://github.com/ChandlerNgo/TitleHero
