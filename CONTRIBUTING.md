@@ -15,7 +15,7 @@ Thanks for your interest in improving TitleHero! This document describes how we 
 
 ## Project Expectations
 TitleHero powers title examination workflows for Bluebonnet Title & Abstract LLC. Production deployments run on AWS (EC2, RDS, S3, Secrets Manager) with sensitive data. Treat every change as though it will be used in production:
-- Keep the ingest/OCR pipeline stable and idempotent.
+- Keep the ingest/OCR pipeline stable.
 - Avoid breaking changes to database schemas without coordination.
 - Document any infrastructure requirements that could impact deployments.
 
