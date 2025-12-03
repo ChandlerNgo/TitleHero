@@ -36,7 +36,7 @@ TitleHero ingests scanned packets, performs multi-page OCR, stores artifacts in 
 - Sharp (TIFF -> PNG conversion)
 - AWS SDK
 - Multer
-- JSON Web Tokens / Cognito integration
+- JSON Web Tokens
 
 ### Frontend
 - React (Vite + TypeScript)
