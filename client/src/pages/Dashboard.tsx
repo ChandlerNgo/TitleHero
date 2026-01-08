@@ -543,12 +543,21 @@ export default function Dashboard() {
     }
   }
 
-  function openPdfByPrefix(prefix?: string | null) {
+  function previewPdf(prefix?: string | null) {
     if (!prefix || !prefix.trim()) {
       alert("No PRSERV prefix available for this record.");
       return;
     }
     const url = `${API_BASE}/documents/pdf?prefix=${encodeURIComponent(prefix.trim())}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
+
+  function downloadPdf(prefix?: string | null) {
+    if (!prefix || !prefix.trim()) {
+      alert("No PRSERV prefix available for this record.");
+      return;
+    }
+    const url = `${API_BASE}/documents/pdf?prefix=${encodeURIComponent(prefix.trim())}&download=true`;
     window.open(url, "_blank", "noopener,noreferrer");
   }
 
@@ -857,11 +866,19 @@ export default function Dashboard() {
                         <>
                           <button
                             className="btn tiny"
-                            onClick={() => openPdfByPrefix(row?.PRSERV)}
-                            title={row?.PRSERV ? `Open ${row.PRSERV}.pdf` : "No PRSERV available"}
+                            onClick={() => previewPdf(row?.PRSERV)}
+                            title={row?.PRSERV ? `Preview ${row.PRSERV}.pdf` : "No PRSERV available"}
                             disabled={!row?.PRSERV}
                           >
                             View
+                          </button>
+                          <button
+                            className="btn tiny"
+                            onClick={() => downloadPdf(row?.PRSERV)}
+                            title={row?.PRSERV ? `Download ${row.PRSERV}.pdf` : "No PRSERV available"}
+                            disabled={!row?.PRSERV}
+                          >
+                            Download
                           </button>
 
                           <button className="btn tiny" onClick={() => beginEdit(row)}>Edit</button>

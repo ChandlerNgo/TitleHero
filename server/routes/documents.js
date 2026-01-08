@@ -632,6 +632,8 @@ app.delete('/documents/:id', async (req, res) => {
 app.get('/documents/pdf', async (req, res) => {
   try {
     const userPrefix = req.query.prefix || '';
+    const download = req.query.download === 'true'; // Check if download mode is requested
+    
     if (!userPrefix) {
       return res.status(400).json({ error: 'prefix query param is required' });
     }
@@ -678,7 +680,9 @@ app.get('/documents/pdf', async (req, res) => {
     const pdfBytes = await pdfDoc.save();
 
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${userPrefix}.pdf"`);
+    // Use 'inline' for preview or 'attachment' for download
+    const disposition = download ? 'attachment' : 'inline';
+    res.setHeader('Content-Disposition', `${disposition}; filename="${userPrefix}.pdf"`);
     res.send(Buffer.from(pdfBytes));
   } catch (error) {
     console.error('Error generating PDF:', error);
