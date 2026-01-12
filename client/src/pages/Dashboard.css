@@ -351,6 +351,72 @@ button:disabled,
 /* RESULTS*/
 .results { margin-top: var(--space-4); }
 
+/* Results header with title and filter button */
+.results-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  justify-content: space-between;
+}
+
+.results-title {
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+/* Filter icon button */
+.filter-icon-btn {
+  font-size: 16px !important;
+  padding: 4px 8px !important;
+  line-height: 1 !important;
+}
+
+/* Results filters */
+.results-filters {
+  background: #faf8f7;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-subtle);
+  white-space: nowrap;
+}
+
+.filter-input {
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 13px;
+  background: white;
+  width: 120px;
+}
+
+.filter-input:focus {
+  outline: none;
+  border-color: var(--maroon-900);
+}
+
+.filter-separator {
+  font-size: 13px;
+  color: var(--ink-subtle);
+}
+
 .result-row {
   border-radius: 16px;
   background: #fff;
@@ -521,6 +587,7 @@ button:disabled,
   display: flex;
   gap: 6px;
   margin-left: 8px;
+  margin-top: 12px;
 }
 
 .btn.tiny.danger {

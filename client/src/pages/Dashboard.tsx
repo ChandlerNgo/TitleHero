@@ -443,6 +443,13 @@ export default function Dashboard() {
   const [removedIds, setRemovedIds] = useState<Set<number>>(new Set());
   const [hoverRemoveId, setHoverRemoveId] = useState<number | null>(null);
 
+  // Filter state for results
+  const [showFilters, setShowFilters] = useState<boolean>(false);
+  const [filterDateFrom, setFilterDateFrom] = useState<string>("");
+  const [filterDateTo, setFilterDateTo] = useState<string>("");
+  const [filterIdMin, setFilterIdMin] = useState<string>("");
+  const [filterIdMax, setFilterIdMax] = useState<string>("");
+
   // NEW: upload modal state
   const [showUpload, setShowUpload] = useState(false);
 
@@ -477,6 +484,40 @@ export default function Dashboard() {
   };
 
   const adminMode = isAdmin();
+
+  // Filter results based on filter criteria
+  const filteredResults = useMemo(() => {
+    return results.filter(row => {
+      // Filter by date range
+      if (filterDateFrom || filterDateTo) {
+        const filingDate = row.filingDate ? new Date(row.filingDate) : null;
+        if (!filingDate) return false;
+        
+        if (filterDateFrom) {
+          const fromDate = new Date(filterDateFrom);
+          if (filingDate < fromDate) return false;
+        }
+        
+        if (filterDateTo) {
+          const toDate = new Date(filterDateTo);
+          if (filingDate > toDate) return false;
+        }
+      }
+      
+      // Filter by ID range
+      if (filterIdMin) {
+        const minId = parseInt(filterIdMin);
+        if (!isNaN(minId) && row.documentID < minId) return false;
+      }
+      
+      if (filterIdMax) {
+        const maxId = parseInt(filterIdMax);
+        if (!isNaN(maxId) && row.documentID > maxId) return false;
+      }
+      
+      return true;
+    });
+  }, [results, filterDateFrom, filterDateTo, filterIdMin, filterIdMax]);
 
   //stuff for editing and deleting
 
@@ -703,18 +744,82 @@ export default function Dashboard() {
           <div className="results">
             <div className="results-header">
               <div className="results-title">
-                RESULTS {loading ? '…' : `(${results.length})`}
+                RESULTS {loading ? '…' : `(${filteredResults.length})`}
               </div>
+              <button 
+                className="btn tiny filter-icon-btn"
+                onClick={() => setShowFilters(!showFilters)}
+                title={showFilters ? 'Hide Filters' : 'Show Filters'}
+              >
+                ☰
+              </button>
               {error && <div className="filter-pill" style={{color: '#b00'}}>{error}</div>}
             </div>
 
-            {results.length === 0 && !loading && !error && (
-              <div className="result-row" style={{background:'#f3efec'}}>
-                No matches.
+            {/* Filter Controls */}
+            {showFilters && (
+              <div className="results-filters">
+              <div className="filter-group">
+                <label className="filter-label">Filed Date Range:</label>
+                <input 
+                  type="date" 
+                  className="filter-input"
+                  placeholder="From"
+                  value={filterDateFrom}
+                  onChange={(e) => setFilterDateFrom(e.target.value)}
+                />
+                <span className="filter-separator">to</span>
+                <input 
+                  type="date" 
+                  className="filter-input"
+                  placeholder="To"
+                  value={filterDateTo}
+                  onChange={(e) => setFilterDateTo(e.target.value)}
+                />
+              </div>
+              
+              <div className="filter-group">
+                <label className="filter-label">ID Range:</label>
+                <input 
+                  type="number" 
+                  className="filter-input"
+                  placeholder="Min ID"
+                  value={filterIdMin}
+                  onChange={(e) => setFilterIdMin(e.target.value)}
+                />
+                <span className="filter-separator">to</span>
+                <input 
+                  type="number" 
+                  className="filter-input"
+                  placeholder="Max ID"
+                  value={filterIdMax}
+                  onChange={(e) => setFilterIdMax(e.target.value)}
+                />
+              </div>
+              
+              {(filterDateFrom || filterDateTo || filterIdMin || filterIdMax) && (
+                <button 
+                  className="btn tiny ghost"
+                  onClick={() => {
+                    setFilterDateFrom("");
+                    setFilterDateTo("");
+                    setFilterIdMin("");
+                    setFilterIdMax("");
+                  }}
+                >
+                  Clear Filters
+                </button>
+              )}
               </div>
             )}
 
-            {results.map(row => {
+            {filteredResults.length === 0 && !loading && !error && (
+              <div className="result-row" style={{background:'#f3efec'}}>
+                {results.length > 0 ? 'No matches for current filters.' : 'No matches.'}
+              </div>
+            )}
+
+            {filteredResults.map(row => {
               const isRemoved = removedIds.has(row.documentID);
               const isHovering = hoverRemoveId === row.documentID;
               
