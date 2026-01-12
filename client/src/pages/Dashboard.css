@@ -358,6 +358,68 @@ button:disabled,
   box-shadow: 0 6px 18px rgba(0,0,0,.06);
   padding: 14px 16px;
   margin-bottom: 12px;
+  position: relative;
+  transition: opacity 0.2s ease, background-color 0.2s ease;
+}
+
+/* X button in top right */
+.remove-x-btn {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 24px;
+  height: 24px;
+  border-radius: 14px;
+  border: 1px solid #ddd;
+  background: white;
+  color: #999;
+  font-size: 20px;
+  line-height: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  z-index: 10;
+  font-weight: 400;
+  padding: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.remove-x-btn:hover {
+  background: var(--maroon-900);
+  color: white;
+  border-color: var(--maroon-900);
+  transform: scale(1.15);
+}
+
+/* Grey out result on hover over X */
+.result-row.hover-remove {
+  opacity: 0.5;
+  background-color: #f5f5f5;
+}
+
+/* Removed placeholder with undo message */
+.result-row.removed-placeholder {
+  background: #f5f5f5;
+  border: 1px dashed #ccc;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 80px;
+  transition: all 0.2s ease;
+}
+
+.result-row.removed-placeholder:hover {
+  background: #e8e8e8;
+  border-color: #999;
+}
+
+.undo-message {
+  color: var(--ink-subtle);
+  font-size: 14px;
+  font-weight: 500;
 }
 
 /* card header */

@@ -438,6 +438,10 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(false);
   const [error, setError]   = useState<string | null>(null);
   const [results, setResults] = useState<any[]>([]);
+  
+  // Track removed results and hover state
+  const [removedIds, setRemovedIds] = useState<Set<number>>(new Set());
+  const [hoverRemoveId, setHoverRemoveId] = useState<number | null>(null);
 
   // NEW: upload modal state
   const [showUpload, setShowUpload] = useState(false);
@@ -541,6 +545,22 @@ export default function Dashboard() {
     } catch (e:any) {
       alert(e?.message || 'Failed to delete');
     }
+  }
+
+  function removeFromList(id: number) {
+    // Mark as removed without deleting from database
+    setRemovedIds(prev => new Set(prev).add(id));
+    setHoverRemoveId(null); // Clear hover state
+  }
+
+  function undoRemove(id: number) {
+    // Restore removed result
+    setRemovedIds(prev => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+    setHoverRemoveId(null); // Clear hover state
   }
 
   function previewPdf(prefix?: string | null) {
@@ -694,8 +714,34 @@ export default function Dashboard() {
               </div>
             )}
 
-            {results.map(row => (
-              <div key={row.documentID} className="result-row">
+            {results.map(row => {
+              const isRemoved = removedIds.has(row.documentID);
+              const isHovering = hoverRemoveId === row.documentID;
+              
+              if (isRemoved) {
+                return (
+                  <div key={row.documentID} className="result-row removed-placeholder" onClick={() => undoRemove(row.documentID)}>
+                    <div className="undo-message">Result removed. Click to undo</div>
+                  </div>
+                );
+              }
+              
+              return (
+              <div 
+                key={row.documentID} 
+                className={`result-row ${isHovering ? 'hover-remove' : ''}`}
+              >
+                {/* X button in top right */}
+                <button
+                  className="remove-x-btn"
+                  onClick={() => removeFromList(row.documentID)}
+                  onMouseEnter={() => setHoverRemoveId(row.documentID)}
+                  onMouseLeave={() => setHoverRemoveId(null)}
+                  title="Remove from results"
+                >
+                  ×
+                </button>
+                
                 {/* header */}
                 <div className="doc-head">
                   <div className="doc-title">
@@ -849,50 +895,42 @@ export default function Dashboard() {
                   </div>
                 )}
 
+                {/* ACTIONS */}
+                <div className="row-actions">
+                  {editId === row.documentID ? (
+                    <>
+                      <button className="btn tiny" onClick={() => saveEdit(row.documentID)}>Save</button>
+                      <button className="btn tiny ghost" onClick={cancelEdit}>Cancel</button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        className="btn tiny"
+                        onClick={() => previewPdf(row?.PRSERV)}
+                        title={row?.PRSERV ? `Preview ${row.PRSERV}.pdf` : "No PRSERV available"}
+                        disabled={!row?.PRSERV}
+                      >
+                        View
+                      </button>
+                      <button
+                        className="btn tiny"
+                        onClick={() => downloadPdf(row?.PRSERV)}
+                        title={row?.PRSERV ? `Download ${row.PRSERV}.pdf` : "No PRSERV available"}
+                        disabled={!row?.PRSERV}
+                      >
+                        Download
+                      </button>
 
-                <div className="doc-head">
-
-                <div className="badges">
-                  {row.exportFlag ? <span className="badge">Uploaded</span> : null}
-
-                  {/* ACTIONS */}
-                    <div className="row-actions">
-                      {editId === row.documentID ? (
-                        <>
-                          <button className="btn tiny" onClick={() => saveEdit(row.documentID)}>Save</button>
-                          <button className="btn tiny ghost" onClick={cancelEdit}>Cancel</button>
-                        </>
-                      ) : (
-                        <>
-                          <button
-                            className="btn tiny"
-                            onClick={() => previewPdf(row?.PRSERV)}
-                            title={row?.PRSERV ? `Preview ${row.PRSERV}.pdf` : "No PRSERV available"}
-                            disabled={!row?.PRSERV}
-                          >
-                            View
-                          </button>
-                          <button
-                            className="btn tiny"
-                            onClick={() => downloadPdf(row?.PRSERV)}
-                            title={row?.PRSERV ? `Download ${row.PRSERV}.pdf` : "No PRSERV available"}
-                            disabled={!row?.PRSERV}
-                          >
-                            Download
-                          </button>
-
-                          <button className="btn tiny" onClick={() => beginEdit(row)}>Edit</button>
-                          <button className="btn tiny danger" onClick={() => deleteRow(row.documentID)}>Delete</button>
-                        </>
-                      )}
-                    </div>
-
+                      <button className="btn tiny" onClick={() => beginEdit(row)}>Edit</button>
+                      <button className="btn tiny danger" onClick={() => deleteRow(row.documentID)}>Delete</button>
+                    </>
+                  )}
                 </div>
-              </div>
 
 
               </div>
-            ))}
+              );
+            })}
           </div>
         </section>
       </main>
