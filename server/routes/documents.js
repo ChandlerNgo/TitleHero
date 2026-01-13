@@ -111,7 +111,10 @@ async function ensureAbstract(pool, rawCode, rawName) {
 app.get('/documents', async (req, res) => {
   try {
     const pool = await getPool();
-    const [rows] = await pool.query('SELECT * FROM Document;');
+
+    // ! stops the server from crashing when it queries 2 million rows
+
+    const [rows] = await pool.query('SELECT * FROM Document WHERE countyID = 1 ORDER BY documentID DESC LIMIT 100;');
     res.status(200).json(rows);
   } catch (err) {
     console.error('Error fetching documents:', err);
