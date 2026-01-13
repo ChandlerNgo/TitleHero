@@ -161,8 +161,6 @@ app.post('/documents', async (req, res) => {
       fieldNotes = null
     } = req.body || {};
 
-
-
     const [result] = await pool.query(
     `INSERT INTO Document (
       abstractCode, bookTypeID, subdivisionID, countyID,
@@ -454,7 +452,6 @@ app.get('/documents/search', async (req, res) => {
   try {
     const pool = await getPool();
 
-    // classify fields
     const textLike = new Set([
       'instrumentNumber','book','volume','page','instrumentType',
       'remarks','legalDescription','subBlock','abstractText','propertyType',
@@ -469,21 +466,18 @@ app.get('/documents/search', async (req, res) => {
     const limit  = Math.min(parseInt(req.query.limit ?? '50', 10) || 50, 200);
     const offset = Math.max(parseInt(req.query.offset ?? '0', 10) || 0, 0);
 
-    // build WHERE over alias "d" (Document)
     const where = [];
     const params = [];
 
     for (const [k, vRaw] of Object.entries(req.query)) {
-      if (k === 'criteria' || k === 'limit' || k === 'offset') continue;
+      if (['criteria','limit','offset'].includes(k)) continue;
       const v = String(vRaw ?? '').trim();
       if (!v) continue;
 
       if (k === 'grantor') {
-        // Party search for Grantor
         where.push(`EXISTS (SELECT 1 FROM Party pt WHERE pt.documentID = d.documentID AND pt.role = 'Grantor' AND pt.name LIKE ?)`);
         params.push(`%${v}%`);
       } else if (k === 'grantee') {
-        // Party search for Grantee
         where.push(`EXISTS (SELECT 1 FROM Party pt WHERE pt.documentID = d.documentID AND pt.role = 'Grantee' AND pt.name LIKE ?)`);
         params.push(`%${v}%`);
       } else if (numericEq.has(k)) {
@@ -500,7 +494,7 @@ app.get('/documents/search', async (req, res) => {
         }
       } else if (textLike.has(k)) {
         if (k === 'abstractCode') {
-          where.push('d.`abstractCode` = ?');
+          where.push(`d.\`abstractCode\` = ?`);
           params.push(v);
         } else {
           where.push(`d.\`${k}\` LIKE ?`);
@@ -509,45 +503,46 @@ app.get('/documents/search', async (req, res) => {
       }
     }
 
-    // freeform criteria: include Party names too
+    // criteria search (optimized to use FULLTEXT if criteria is present)
     const criteria = String(req.query.criteria ?? '').trim();
     if (criteria) {
-      const docCols = [
-        'instrumentNumber','instrumentType','legalDescription','remarks','address',
-        'CADNumber','CADNumber2','book','volume','page','abstractText','fieldNotes'
-      ];
-      const orParts = docCols.map(c => `d.\`${c}\` LIKE ?`);
-
-      // add EXISTS for parties
-      orParts.push(`EXISTS (SELECT 1 FROM Party px WHERE px.documentID = d.documentID AND px.name LIKE ?)`);
-      // push params for docCols
-      for (let i = 0; i < docCols.length; i++) params.push(`%${criteria}%`);
-      // param for party EXISTS
-      params.push(`%${criteria}%`);
-
-      where.push(`(${orParts.join(' OR ')})`);
+      where.push(`MATCH(
+        d.instrumentNumber, d.instrumentType, d.legalDescription, d.remarks, d.address,
+        d.CADNumber, d.CADNumber2, d.book, d.volume, d.page, d.abstractText, d.fieldNotes
+      ) AGAINST (? IN BOOLEAN MODE)`);
+      params.push(criteria + '*');
     }
 
-    // final SQL with joins + aggregation
-    let sql = `
-      SELECT
-        d.*,
-        c.name AS countyName,
-        GROUP_CONCAT(CASE WHEN p.role = 'Grantor' THEN p.name END SEPARATOR '; ') AS grantors,
-        GROUP_CONCAT(CASE WHEN p.role = 'Grantee' THEN p.name END SEPARATOR '; ') AS grantees
+    // Build the WHERE clause string
+    const whereClause = where.length ? `WHERE ${where.join(' AND ')}` : '';
+
+    // Subquery to limit documents first by updated/created date, filtering applied
+    const limitedDocsSubquery = `
+      SELECT d.documentID
       FROM Document d
-      LEFT JOIN County c ON c.countyID = d.countyID
-      LEFT JOIN Party  p ON p.documentID = d.documentID
-    `;
-    if (where.length) sql += ` WHERE ${where.join(' AND ')}`;
-    sql += `
-      GROUP BY d.documentID
+      ${whereClause}
       ORDER BY (d.updated_at IS NULL), d.updated_at DESC, (d.created_at IS NULL), d.created_at DESC
       LIMIT ? OFFSET ?
     `;
     params.push(limit, offset);
 
+    // Final query joining the limited docs with other data & aggregations
+    const sql = `
+      SELECT
+        d.documentID, d.instrumentNumber, d.filingDate, d.abstractCode,
+        c.name AS countyName,
+        GROUP_CONCAT(CASE WHEN p.role = 'Grantor' THEN p.name END SEPARATOR '; ') AS grantors,
+        GROUP_CONCAT(CASE WHEN p.role = 'Grantee' THEN p.name END SEPARATOR '; ') AS grantees
+      FROM (${limitedDocsSubquery}) limited
+      JOIN Document d ON d.documentID = limited.documentID
+      LEFT JOIN County c ON c.countyID = d.countyID
+      LEFT JOIN Party p ON p.documentID = d.documentID
+      GROUP BY d.documentID
+      ORDER BY (d.updated_at IS NULL), d.updated_at DESC, (d.created_at IS NULL), d.created_at DESC
+    `;
+
     const [rows] = await pool.query(sql, params);
+
     res.status(200).json({ rows, limit, offset, count: rows.length });
   } catch (err) {
     console.error('Error searching documents:', err);
