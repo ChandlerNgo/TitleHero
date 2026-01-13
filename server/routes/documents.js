@@ -529,7 +529,7 @@ app.get('/documents/search', async (req, res) => {
     // Final query joining the limited docs with other data & aggregations
     const sql = `
       SELECT
-        d.*
+        d.*,
         c.name AS countyName,
         GROUP_CONCAT(CASE WHEN p.role = 'Grantor' THEN p.name END SEPARATOR '; ') AS grantors,
         GROUP_CONCAT(CASE WHEN p.role = 'Grantee' THEN p.name END SEPARATOR '; ') AS grantees
