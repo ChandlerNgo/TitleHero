@@ -32,6 +32,12 @@
   color: var(--maroon-800);
 }
 
+.welcome-logo {
+  height: 50px;
+  width: auto;
+  object-fit: contain;
+}
+
 .ctas { display: flex; gap: 12px; }
 
 .subhead { margin-top: 8px; color: var(--ink-700); }

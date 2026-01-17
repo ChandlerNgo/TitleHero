@@ -59,6 +59,13 @@
   line-height: 1;
 }
 
+/* Sidebar logo */
+.sidebar-logo {
+  height: 40px;
+  width: auto;
+  object-fit: contain;
+}
+
 /* Upload button in bottom-left corner */
 .sidebar .upload-btn {
   position: fixed;

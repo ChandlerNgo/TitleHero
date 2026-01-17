@@ -628,7 +628,7 @@ export default function Dashboard() {
     <div className="app">
       {/* Sidebar */}
       <aside className="sidebar">
-        <div className="brand">TITLEHERO</div>
+        <img src="/TITLE HERO TRANSPARENT LOGO.png" alt="Title Hero" className="sidebar-logo"/>
 
         {adminMode && <AdminSignupForm/>}
 
